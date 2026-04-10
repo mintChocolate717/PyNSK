@@ -1,6 +1,5 @@
 """Tests for Gaussian quadrature (src/quadrature.py)."""
 import numpy as np
-import jax.numpy as jnp
 import pytest
 from src.bsplines import make_knot_vector
 from src.quadrature import gauss_legendre, recommended_n_gauss, quadrature_points
