@@ -4,28 +4,32 @@
 
 ### Decisions
 - **Code alongside LaTeX**, section by section. Each residual is implemented and verified immediately after its LaTeX derivation is complete.
-- **PyTorch throughout**: all residual functions return `torch.Tensor` so AutoDiff can differentiate the assembled residual w.r.t. control point DOFs to form K_tan in one shot.
-- **Basis matrices are constants**: `bsplines.py` returns plain float64 tensors (no grad). AutoDiff only traces through the physics (residual computation), not through basis evaluation. Field values are then `N @ d` where `d.requires_grad=True`.
-- **K_tan via AutoDiff**: before differentiating, `d_dot_{n+1}` is expressed as a function of `d_{n+1}` through the kinematic update so the full chain rule is captured in a single `torch.autograd.functional.jacobian` call.
-
-### Architecture
-```
-src/
-  bsplines.py      ← done
-  quadrature.py    ← next
-  constitutive.py
-  residuals.py
-  assembler.py
-  solver.py
-tests/
-  test_bsplines.py ← done
-```
+- **JAX throughout** (switched from PyTorch): functional autodiff via `jax.jacobian(f)(x)` is cleaner for forming K_tan than tape-based autograd. Float64 enabled globally in `src/__init__.py`.
+- **Basis matrices are constants**: `bsplines.py` returns plain float64 JAX arrays (no grad). JAX differentiates through the physics only. Field values are `N @ d` where `d` is a JAX array passed to `jax.jacobian`.
+- **K_tan via JAX AutoDiff**: `d_dot_{n+1}` expressed as function of `d_{n+1}` via kinematic update before differentiating so both αf and αm contributions are captured in one `jax.jacobian` call.
 
 ### Completed
 - `src/bsplines.py`: `make_knot_vector`, `basis_matrix`, `basis_deriv_matrix`
 - `tests/test_bsplines.py`: partition of unity, non-negativity, endpoint interpolation, finite-difference derivative checks
 - `environment.yml`, `TODO.md`, `DEVLOG.md`
 
-### Algorithm gaps fixed (numerical-implementation.tex)
-- Added explicit corrector formula: `d_dot_{n+1}^{i+1} = d_dot_{n+1}^i + Δd / (γ Δt)`
-- Clarified K_tan AutoDiff: `d_dot_{n+1}` must be substituted via kinematic update before differentiating so both αf and αm contributions are captured
+### LaTeX changes (Bubble-Cavitation repo)
+- Fixed algorithm: added explicit corrector formula `d_dot_{n+1}^{i+1} = d_dot_{n+1}^i + Δd / (γ Δt)`
+- Fixed K_tan AutoDiff clarification
+
+---
+
+## [2026-04-10] — Session 2: Quadrature, Repo Split
+
+### Decisions
+- Split into two repos: `Bubble-Cavitation` (LaTeX/Overleaf) and `PyNSK` (solver)
+- GitHub Actions added: LaTeX compile + PDF artifact on `Bubble-Cavitation`; pytest + ruff on `PyNSK`
+
+### Completed
+- `src/quadrature.py`: `gauss_legendre`, `quadrature_points`, `recommended_n_gauss`
+  - Coordinate mapping: r(ξ_ref) = (r_{e+1}-r_e)/2 * ξ_ref + (r_{e+1}+r_e)/2, J_e = (r_{e+1}-r_e)/2
+  - r² spherical factor intentionally excluded — applied per-residual
+- `tests/test_quadrature.py`: 13 tests — weight sums, exact polynomial integration, r=R_max*xi, ∫r²dr = R³/3
+
+### LaTeX sections covered
+- `spatial-discretization-Bsplines/coordinate-mapping.tex` → `src/quadrature.py`

@@ -2,7 +2,7 @@
 
 ## Milestone 1: Spatial Foundation
 - [x] `src/bsplines.py` — basis matrix, first and second derivative matrices
-- [ ] `src/quadrature.py` — Gauss-Legendre points/weights, coordinate mapping from reference element to physical domain
+- [x] `src/quadrature.py` — Gauss-Legendre points/weights, coordinate mapping from reference element to physical domain
 
 ## Milestone 2: Physics
 - [ ] `src/constitutive.py` — van der Waals EOS, Korteweg stress, viscous stress, heat flux, chemical potential
