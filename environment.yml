@@ -1,0 +1,14 @@
+name: bubble-cavitation
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.13
+  - numpy
+  - scipy
+  - matplotlib
+  - jupyter
+  - pytest
+  - pip
+  - pip:
+    - jax[cpu]
