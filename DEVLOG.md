@@ -33,3 +33,31 @@
 
 ### LaTeX sections covered
 - `spatial-discretization-Bsplines/coordinate-mapping.tex` → `src/quadrature.py`
+
+---
+
+## [2026-04-10] — Session 3: Constitutive Laws, Residuals
+
+### Decisions
+- **\vartheta** for temperature throughout LaTeX (avoids conflict with polar angle \theta in τ_{θθ}, ς_{θθ} subscripts).
+- **Interstitial working sign**: Π_r = (1/We)ρ(∂u_r/∂r + 2u_r/r)(∂ρ/∂r) — positive sign follows Liu et al. Eq.(95).
+- **∂(ρE)/∂t** computed analytically by expanding ρE term by term; avoids AD through constitutive functions at assembly time.
+
+### Completed
+- `src/constitutive.py` — Milestone 2:
+  - `free_energy_loc`, `pressure`, `entropy`, `chemical_potential`, `internal_energy_loc`, `total_energy`
+  - `viscous_stress`, `korteweg_stress`, `kappa_star`, `heat_flux`, `interstitial_working`
+- `tests/test_constitutive.py` — Milestone 2 tests
+- `src/residuals.py` — Milestone 3:
+  - `element_residual_mass`, `element_residual_momentum`, `element_residual_energy`, `element_residual_auxiliary`
+  - All use `jnp.einsum("q,qc->c", weights, integrand)` pattern; vectorized over quadrature points
+- `tests/test_residuals.py` — 12 tests, 12 passing (commit 8ce10fc)
+
+### LaTeX sections covered (Bubble-Cavitation repo)
+- `constitutive-laws/thermodynamics/nondimensionalization.tex` — reference scales, Re/We/κ*
+- `constitutive-laws/thermodynamics/free-energy.tex` — Ψ_loc, Ψ_cap
+- `constitutive-laws/thermodynamics/derived-quantities.tex` — p, s, ν, ι, E
+- `constitutive-laws/mechanical/viscous-stress.tex` — τ_rr, τ_{θθ}
+- `constitutive-laws/mechanical/korteweg-stress.tex` — ς_rr, ς_{θθ}
+- `constitutive-laws/thermal/heat-flux.tex` — q_r
+- `constitutive-laws/thermal/interstitial-working.tex` — Π_r
