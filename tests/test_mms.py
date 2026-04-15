@@ -17,11 +17,9 @@ us fully explicit N_C(r) and dN_C/dr which sympy can integrate in
 closed form, and leaves plenty of Gauss points to absorb any
 polynomial-degree growth.
 """
-import math
 
 import jax.numpy as jnp
 import numpy as np
-import pytest
 import sympy as sp
 
 from src.residuals import (

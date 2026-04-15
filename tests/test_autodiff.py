@@ -11,7 +11,6 @@ tangent stiffness K_tan from these same derivatives.
 import jax
 import jax.numpy as jnp
 import numpy as np
-import pytest
 
 from src.bsplines import basis_deriv_matrix, basis_matrix, make_knot_vector
 from src.quadrature import gauss_legendre
@@ -81,8 +80,10 @@ def _fd_jacobian(f, x, eps=1e-6):
     n = x.shape[0]
     J = np.zeros((m, n))
     for k in range(n):
-        xp = x.copy(); xp[k] += eps
-        xm = x.copy(); xm[k] -= eps
+        xp = x.copy()
+        xp[k] += eps
+        xm = x.copy()
+        xm[k] -= eps
         J[:, k] = (np.asarray(f(jnp.array(xp))) - np.asarray(f(jnp.array(xm)))) / (2 * eps)
     return J
 
