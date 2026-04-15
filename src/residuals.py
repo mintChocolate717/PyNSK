@@ -1,3 +1,11 @@
+"""Element residual assembly for the 1D spherically-symmetric NSK system.
+
+Naming convention:
+    * ``vartheta`` — temperature ϑ and quantities derived from it
+      (``dvartheta_dr``, ``N_vartheta``, ``ctrl_vartheta``).
+    * ``tt`` / ``theta`` suffixes on stresses (``tau_tt``, ``sigma_tt``,
+      ``ς_θθ``) refer to the **polar angle** θ. These stay named ``tt``.
+"""
 import jax.numpy as jnp
 
 from src.constitutive import (
@@ -11,17 +19,30 @@ from src.constitutive import (
 )
 
 
-def _phase_field_div(drho_dr, d2rho_dr2, dtheta_dr, theta, r):
+def phase_field_div(drho_dr, d2rho_dr2, dvartheta_dr, vartheta, r):
     """Spherical divergence ∇·(∇ρ/ϑ) at quadrature points.
 
-    Eq. (eq:disc-phase-div):
+    Eq. (eq:disc-phase-div)::
+
         2/(r ϑ) ∂ρ/∂r  −  (1/ϑ²) (∂ϑ/∂r)(∂ρ/∂r)  +  (1/ϑ) ∂²ρ/∂r²
+
+    Args:
+        drho_dr:      first radial derivative of density at quad points
+        d2rho_dr2:    second radial derivative of density
+        dvartheta_dr: first radial derivative of temperature ϑ
+        vartheta:     temperature ϑ at quad points
+        r:            physical radial coordinate at quad points
     """
     return (
-        2.0 / (r * theta) * drho_dr
-        - 1.0 / theta**2 * dtheta_dr * drho_dr
-        + 1.0 / theta * d2rho_dr2
+        2.0 / (r * vartheta) * drho_dr
+        - 1.0 / vartheta**2 * dvartheta_dr * drho_dr
+        + 1.0 / vartheta * d2rho_dr2
     )
+
+
+# Backwards-compatible alias (private spelling) in case any external caller
+# still imports it. Prefer ``phase_field_div`` in new code.
+_phase_field_div = phase_field_div
 
 
 def element_residual_mass(
@@ -37,7 +58,8 @@ def element_residual_mass(
 ):
     """Element residual for the mass equation R^{ρ,e}_C.
 
-    Implements Eq. (mass-eq:element_residual):
+    Implements Eq. (mass-eq:element_residual)::
+
         R^ρ_C = Σ_q [N^ρ_C ρ̇ − (dN^ρ_C/dr) ρ u_r] r_q² J_e w_q
 
     Args:
@@ -71,14 +93,14 @@ def element_residual_momentum(
     N_rho,
     dN_rho,
     d2N_rho,
-    N_theta,
-    dN_theta,
+    N_vartheta,
+    dN_vartheta,
     N_V,
     ctrl_rho,
     ctrl_rho_dot,
     ctrl_u,
     ctrl_u_dot,
-    ctrl_theta,
+    ctrl_vartheta,
     ctrl_V,
     r_q,
     w_q,
@@ -93,16 +115,16 @@ def element_residual_momentum(
     Implements Eq. (momentum-eq:element_residual).
 
     Args:
-        N_u, dN_u:           (n_qp, n_u)    velocity basis and derivatives
-        N_rho, dN_rho, d2N_rho: (n_qp, n_rho) density basis up to 2nd derivative
-        N_theta, dN_theta:   (n_qp, n_theta) temperature basis and derivatives
-        N_V:                 (n_qp, n_V)    auxiliary variable basis
-        ctrl_*:              control point arrays for each field
-        ctrl_rho_dot:        (n_rho,) time derivative of density
-        ctrl_u_dot:          (n_u,)   time derivative of velocity
-        r_q, w_q, J_e:       quadrature data
-        Re, We, gamma:       dimensionless parameters
-        b_r:                 scalar radial body force (per unit mass)
+        N_u, dN_u:                 (n_qp, n_u)        velocity basis and derivatives
+        N_rho, dN_rho, d2N_rho:    (n_qp, n_rho)      density basis up to 2nd derivative
+        N_vartheta, dN_vartheta:   (n_qp, n_vartheta) temperature ϑ basis and derivatives
+        N_V:                       (n_qp, n_V)        auxiliary variable basis
+        ctrl_*:                    control point arrays for each field
+        ctrl_rho_dot:              (n_rho,) time derivative of density
+        ctrl_u_dot:                (n_u,)   time derivative of velocity
+        r_q, w_q, J_e:             quadrature data
+        Re, We, gamma:             dimensionless parameters
+        b_r:                       scalar radial body force (per unit mass)
 
     Returns:
         (n_u,) element residual vector
@@ -116,21 +138,21 @@ def element_residual_momentum(
     du_dr_q = dN_u @ ctrl_u
     u_dot_q = N_u @ ctrl_u_dot
 
-    theta_q = N_theta @ ctrl_theta
-    dtheta_dr_q = dN_theta @ ctrl_theta
+    vartheta_q = N_vartheta @ ctrl_vartheta
+    dvartheta_dr_q = dN_vartheta @ ctrl_vartheta
 
     V_q = N_V @ ctrl_V
 
-    div_q = _phase_field_div(drho_dr_q, d2rho_dr2_q, dtheta_dr_q, theta_q, r_q)
+    div_q = phase_field_div(drho_dr_q, d2rho_dr2_q, dvartheta_dr_q, vartheta_q, r_q)
 
     # η = ρVϑ + ½ρu² + (1/We)ρϑ∇·(∇ρ/ϑ)
-    eta_q = rho_q * V_q * theta_q + 0.5 * rho_q * u_q**2 + (1.0 / We) * rho_q * theta_q * div_q
+    eta_q = rho_q * V_q * vartheta_q + 0.5 * rho_q * u_q**2 + (1.0 / We) * rho_q * vartheta_q * div_q
 
     # ξ = Vϑ + ½u² + (1/We)ϑ∇·(∇ρ/ϑ)
-    xi_q = V_q * theta_q + 0.5 * u_q**2 + (1.0 / We) * theta_q * div_q
+    xi_q = V_q * vartheta_q + 0.5 * u_q**2 + (1.0 / We) * vartheta_q * div_q
 
     # H = ρs  (volumetric entropy density)
-    H_q = rho_q * entropy(rho_q, theta_q, gamma)
+    H_q = rho_q * entropy(rho_q, vartheta_q, gamma)
 
     tau_rr_q, tau_tt_q = viscous_stress(du_dr_q, u_q, r_q, Re)
     varsigma_rr_q, varsigma_tt_q = korteweg_stress(rho_q, drho_dr_q, d2rho_dr2_q, r_q, We)
@@ -145,7 +167,7 @@ def element_residual_momentum(
     coeff_N = (
         d_rhou_dt_q
         - xi_q * drho_dr_q
-        - H_q * dtheta_dr_q
+        - H_q * dvartheta_dr_q
         + (2.0 / r_q) * (tau_tt_q + varsigma_tt_q - eta_q)
         - rho_q * b_r
     )
@@ -156,8 +178,8 @@ def element_residual_momentum(
 
 
 def element_residual_energy(
-    N_theta,
-    dN_theta,
+    N_vartheta,
+    dN_vartheta,
     N_rho,
     dN_rho,
     d2N_rho,
@@ -168,8 +190,8 @@ def element_residual_energy(
     ctrl_rho_dot,
     ctrl_u,
     ctrl_u_dot,
-    ctrl_theta,
-    ctrl_theta_dot,
+    ctrl_vartheta,
+    ctrl_vartheta_dot,
     ctrl_V,
     r_q,
     w_q,
@@ -187,18 +209,18 @@ def element_residual_energy(
     ∂(ρE)/∂t is computed analytically from primary-field time derivatives.
 
     Args:
-        N_theta, dN_theta:   (n_qp, n_theta) temperature basis and derivatives
-        N_rho, dN_rho, d2N_rho: (n_qp, n_rho)
-        N_u, dN_u:           (n_qp, n_u)
-        N_V:                 (n_qp, n_V)
-        ctrl_*_dot:          time derivatives of each field's control points
-        r_q, w_q, J_e:       quadrature data
-        Re, We, gamma, Pr:   dimensionless parameters
-        b_r:                 scalar radial body force
-        r_s:                 scalar volumetric heat source
+        N_vartheta, dN_vartheta:   (n_qp, n_vartheta) temperature ϑ basis and derivatives
+        N_rho, dN_rho, d2N_rho:    (n_qp, n_rho)
+        N_u, dN_u:                 (n_qp, n_u)
+        N_V:                       (n_qp, n_V)
+        ctrl_*_dot:                time derivatives of each field's control points
+        r_q, w_q, J_e:             quadrature data
+        Re, We, gamma, Pr:         dimensionless parameters
+        b_r:                       scalar radial body force
+        r_s:                       scalar volumetric heat source
 
     Returns:
-        (n_theta,) element residual vector
+        (n_vartheta,) element residual vector
     """
     rho_q = N_rho @ ctrl_rho
     drho_dr_q = dN_rho @ ctrl_rho
@@ -210,36 +232,36 @@ def element_residual_energy(
     du_dr_q = dN_u @ ctrl_u
     u_dot_q = N_u @ ctrl_u_dot
 
-    theta_q = N_theta @ ctrl_theta
-    dtheta_dr_q = dN_theta @ ctrl_theta
-    theta_dot_q = N_theta @ ctrl_theta_dot
+    vartheta_q = N_vartheta @ ctrl_vartheta
+    dvartheta_dr_q = dN_vartheta @ ctrl_vartheta
+    vartheta_dot_q = N_vartheta @ ctrl_vartheta_dot
 
     V_q = N_V @ ctrl_V
 
-    div_q = _phase_field_div(drho_dr_q, d2rho_dr2_q, dtheta_dr_q, theta_q, r_q)
+    div_q = phase_field_div(drho_dr_q, d2rho_dr2_q, dvartheta_dr_q, vartheta_q, r_q)
 
-    H_q = rho_q * entropy(rho_q, theta_q, gamma)
+    H_q = rho_q * entropy(rho_q, vartheta_q, gamma)
 
     # β = ρVϑ − ϑH + (1/2We)(∂ρ/∂r)² + ρu² + (1/We)ρϑ∇·(∇ρ/ϑ)
     beta_q = (
-        rho_q * V_q * theta_q
-        - theta_q * H_q
+        rho_q * V_q * vartheta_q
+        - vartheta_q * H_q
         + 0.5 / We * drho_dr_q**2
         + rho_q * u_q**2
-        + (1.0 / We) * rho_q * theta_q * div_q
+        + (1.0 / We) * rho_q * vartheta_q * div_q
     )
 
     tau_rr_q, _ = viscous_stress(du_dr_q, u_q, r_q, Re)
     varsigma_rr_q, _ = korteweg_stress(rho_q, drho_dr_q, d2rho_dr2_q, r_q, We)
 
     kappa = kappa_star(Re, Pr, gamma)
-    q_r_q = heat_flux(dtheta_dr_q, kappa)
+    q_r_q = heat_flux(dvartheta_dr_q, kappa)
     Pi_r_q = interstitial_working(rho_q, du_dr_q, u_q, r_q, drho_dr_q, We)
 
     # ∂(ρE)/∂t  from  ρE = −ρ² + 8ρϑ/(27(γ−1)) + (∂ρ/∂r)²/(2We) + ½ρu²
     d_rhoE_dt_q = (
-        (-2.0 * rho_q + 8.0 * theta_q / (27.0 * (gamma - 1.0)) + 0.5 * u_q**2) * rho_dot_q
-        + 8.0 * rho_q / (27.0 * (gamma - 1.0)) * theta_dot_q
+        (-2.0 * rho_q + 8.0 * vartheta_q / (27.0 * (gamma - 1.0)) + 0.5 * u_q**2) * rho_dot_q
+        + 8.0 * rho_q / (27.0 * (gamma - 1.0)) * vartheta_dot_q
         + drho_dr_q / We * drho_dot_dr_q
         + rho_q * u_q * u_dot_q
     )
@@ -251,7 +273,7 @@ def element_residual_energy(
     coeff_N = d_rhoE_dt_q - rho_q * b_r * u_q - rho_q * r_s
 
     weights = r_q**2 * J_e * w_q
-    integrand = coeff_dN[:, None] * dN_theta + coeff_N[:, None] * N_theta
+    integrand = coeff_dN[:, None] * dN_vartheta + coeff_N[:, None] * N_vartheta
     return jnp.einsum("q,qc->c", weights, integrand)
 
 
@@ -261,10 +283,10 @@ def element_residual_auxiliary(
     N_rho,
     dN_rho,
     N_u,
-    N_theta,
+    N_vartheta,
     ctrl_rho,
     ctrl_u,
-    ctrl_theta,
+    ctrl_vartheta,
     ctrl_V,
     r_q,
     w_q,
@@ -274,18 +296,19 @@ def element_residual_auxiliary(
 ):
     """Element residual for the auxiliary equation R^{V,e}_C.
 
-    Implements Eq. (auxiliary-eq:element_residual):
+    Implements Eq. (auxiliary-eq:element_residual)::
+
         R^V_C = Σ_q { N^V [V − (1/ϑ)(ν_loc − ½u²)]
                       − (dN^V/dr) [1/(We ϑ) ∂ρ/∂r] } r_q² J_e w_q
 
     Args:
-        N_V, dN_V:   (n_qp, n_V)    auxiliary basis and derivatives
-        N_rho, dN_rho: (n_qp, n_rho)
-        N_u:         (n_qp, n_u)
-        N_theta:     (n_qp, n_theta)
-        ctrl_*:      control point arrays
-        r_q, w_q, J_e: quadrature data
-        We, gamma:   dimensionless parameters
+        N_V, dN_V:      (n_qp, n_V)        auxiliary basis and derivatives
+        N_rho, dN_rho:  (n_qp, n_rho)
+        N_u:            (n_qp, n_u)
+        N_vartheta:     (n_qp, n_vartheta)
+        ctrl_*:         control point arrays
+        r_q, w_q, J_e:  quadrature data
+        We, gamma:      dimensionless parameters
 
     Returns:
         (n_V,) element residual vector
@@ -293,16 +316,16 @@ def element_residual_auxiliary(
     rho_q = N_rho @ ctrl_rho
     drho_dr_q = dN_rho @ ctrl_rho
     u_q = N_u @ ctrl_u
-    theta_q = N_theta @ ctrl_theta
+    vartheta_q = N_vartheta @ ctrl_vartheta
     V_q = N_V @ ctrl_V
 
-    nu_loc_q = chemical_potential(rho_q, theta_q, gamma)
+    nu_loc_q = chemical_potential(rho_q, vartheta_q, gamma)
 
     # N^V coefficient: [V − (1/ϑ)(ν_loc − ½u²)]
-    coeff_N = V_q - (1.0 / theta_q) * (nu_loc_q - 0.5 * u_q**2)
+    coeff_N = V_q - (1.0 / vartheta_q) * (nu_loc_q - 0.5 * u_q**2)
 
     # dN^V/dr coefficient: −1/(We ϑ) ∂ρ/∂r
-    coeff_dN = -(1.0 / (We * theta_q)) * drho_dr_q
+    coeff_dN = -(1.0 / (We * vartheta_q)) * drho_dr_q
 
     weights = r_q**2 * J_e * w_q
     integrand = coeff_N[:, None] * N_V + coeff_dN[:, None] * dN_V
