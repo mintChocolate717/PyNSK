@@ -9,6 +9,13 @@ dependencies:
   - matplotlib
   - jupyter
   - pytest
+  - pytest-cov
+  - ruff
+  - mypy
+  - pre-commit
+  - pyyaml
   - pip
   - pip:
     - jax[cpu]
+    - sphinx
+    - sphinx-rtd-theme

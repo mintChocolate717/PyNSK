@@ -61,3 +61,70 @@
 - `constitutive-laws/mechanical/korteweg-stress.tex` — ς_rr, ς_{θθ}
 - `constitutive-laws/thermal/heat-flux.tex` — q_r
 - `constitutive-laws/thermal/interstitial-working.tex` — Π_r
+
+---
+
+## [2026-04-15] — Session 4: Five-phase parallel push, Phase E polish
+
+### The plan
+With Milestones 1–3 done, the remaining work (assembler, solver, I/O,
+regression, tooling) was split into five phases that can progress in
+parallel without stepping on each other's source files:
+
+- **Phase A** — input layer: YAML config loader, CLI entry point, problem
+  registry.
+- **Phase B** — assembly layer: `src/assembler.py`, sparse pattern
+  bookkeeping, dof maps.
+- **Phase C** — solver layer: `src/solver.py` with General-α +
+  Newton–Raphson, AutoDiff K_tan, eigen-diagnostics.
+- **Phase D** — physics closure + I/O: boundary/initial conditions, VTK
+  output, conservation monitors.
+- **Phase E** — infrastructure & polish *(this session)*: authoritative
+  `pyproject.toml`, CI upgrade, regression skeleton, docs, trackers.
+
+Each phase runs on its own branch (`phaseX/<slug>`) and merges to `main`
+independently. Source-file scope is disjoint; where overlap is
+unavoidable (trackers, README) Phase E owns the edit and the others
+rebase.
+
+### Completed (Phase E)
+- `pyproject.toml` — authoritative config: ruff (E/F/I/B/NPY/RUF/UP/SIM,
+  line 100, py313), per-file ignores, pytest (`testpaths`,
+  `--strict-markers`, `regression` marker), coverage (`source=src`,
+  branch, `fail_under=80`), mypy strict with JAX overrides.
+- `.github/workflows/ci.yml` — jobs split into `lint`, `typecheck`
+  (continue-on-error), `test` (matrix on 3.13, coverage artifact
+  upload), `docs-build` (optional), and a manually-triggered
+  `regression` job gated on `workflow_dispatch`.
+- `tests/regression/` — package skeleton with three skipped placeholders
+  (manufactured solution, bubble-collapse smoke, conservation budget)
+  plus a `fixtures/` directory + README documenting the NPZ format.
+- `src/_repro.py` + `tests/test_repro.py` — `set_reproducible(seed)`
+  seeds `random`, numpy, JAX and returns a version snapshot. The one
+  new `src/*.py` allowed this session (greenfield, no conflict).
+- `CONTRIBUTING.md` — naming (θ vs ϑ → `vartheta`), type-hint style,
+  testing expectations, branch/commit conventions.
+- `docs/architecture.md` — ASCII layer diagram
+  (bsplines/quadrature → constitutive → residuals → assembler → solver
+  → postprocess/io) + module table + CMAME 2015 citation.
+- `docs/conf.py`, `docs/index.rst` — Sphinx skeleton, autodoc-ready.
+- `scripts/` — `run_sample_case.py` placeholder and
+  `regen_regression_fixtures.py` skeleton.
+- `.pre-commit-config.yaml` — ruff, ruff-format, check-yaml,
+  end-of-file-fixer, trailing-whitespace, check-added-large-files.
+- `README.md` — installation, tests, sample-case command, citation
+  block, repo layout.
+- `TODO.md` — Phases A–D marked `[in-flight]`, new tracked items
+  (VTK output, YAML config, sparse solvers, eigendiagnostics,
+  conservation monitors, regression fixtures).
+
+### Decisions
+- Coverage threshold starts at **80 %** (not 85 %) so Phases B–D can
+  land without immediately failing CI; ratchet after Phase D merges.
+- mypy is **non-blocking** until the assembler/solver types settle —
+  strict mode is configured but the job carries `continue-on-error`.
+- Regression tests use a dedicated `regression` pytest marker plus a
+  CI job that only fires on `workflow_dispatch`; they never run on
+  routine PRs.
+- Fixture NPZ files under `tests/regression/fixtures/` stay in git only
+  while small (< 200 kB); larger ones will move to Git LFS.

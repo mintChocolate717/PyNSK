@@ -5,9 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_regression:
+        description: "Run long-running regression suite"
+        required: false
+        default: "false"
 
 jobs:
-  test:
+  lint:
+    name: Lint (ruff)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,13 +24,124 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install dependencies
+      - name: Install ruff
         run: |
-          pip install --upgrade pip
-          pip install numpy scipy "jax[cpu]" pytest ruff
+          python -m pip install --upgrade pip
+          pip install ruff
 
-      - name: Lint with ruff
+      - name: Ruff check
         run: ruff check src/ tests/
 
-      - name: Run tests
-        run: pytest tests/ -v
+      - name: Ruff format (check only)
+        run: ruff format --check src/ tests/
+
+  typecheck:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    continue-on-error: true  # non-blocking for now; strict types are a stretch goal
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Mypy
+        run: mypy src/
+
+  test:
+    name: Unit tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Pytest with coverage
+        run: |
+          pytest tests/ -v \
+              --ignore=tests/regression \
+              --cov=src --cov-branch \
+              --cov-report=xml --cov-report=term
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-py${{ matrix.python-version }}
+          path: coverage.xml
+          if-no-files-found: warn
+
+  docs-build:
+    name: Sphinx docs (optional)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,docs]"
+
+      - name: Build Sphinx docs
+        run: |
+          if [ -f docs/conf.py ]; then
+              sphinx-build -b html docs docs/_build/html -W --keep-going || true
+          else
+              echo "No docs/conf.py — skipping."
+          fi
+
+      - name: Upload docs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sphinx-html
+          path: docs/_build/html
+          if-no-files-found: ignore
+
+  regression:
+    name: Regression suite (manual)
+    # Only runs on workflow_dispatch with run_regression=true — skipped on
+    # regular PRs and pushes.
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_regression == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Regression tests
+        run: pytest tests/regression/ -v
