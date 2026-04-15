@@ -1,0 +1,45 @@
+# Bubble-collapse reference case for the 1D spherical NSK solver.
+# All values are DIMENSIONLESS in the Liu-Landis-Gomez-Hughes scaling.
+
+meta:
+  name: bubble_collapse
+  description: >
+    Spherical vapor bubble immersed in sub-critical liquid. The tanh-profile
+    initial density triggers Korteweg-driven oscillation/collapse. Used as
+    the reference integration test in notebooks/04_bubble_collapse.ipynb.
+
+mesh:
+  n_ctrl: 64
+  R_max: 1.0
+
+discretization:
+  degree: 3
+  n_gauss: 4
+
+time:
+  dt: 1.0e-4
+  t_end: 0.05
+  rho_inf: 0.5
+
+material:
+  Re: 100.0
+  We: 1.0
+  Pr: 7.0
+  gamma: 1.4
+
+initial:
+  kind: bubble
+  R_bubble: 0.30
+  interface_width: 0.04
+  rho_liq: 0.60
+  rho_vap: 0.05
+  vartheta_0: 0.85
+
+boundary:
+  inner: symmetry
+  outer: free
+
+output:
+  path: out/bubble_collapse
+  every: 20
+  format: xdmf
