@@ -40,7 +40,6 @@ from src.constitutive import (
     pressure,
 )
 
-
 # ── Closed-form analytic references ──────────────────────────────────────────
 
 def _p_ref(rho, vt):

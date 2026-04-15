@@ -1,15 +1,17 @@
-import jax.numpy as jnp
 import jax
+import jax.numpy as jnp
+
 from src.constitutive import (
-    pressure,
     entropy,
-    internal_energy_loc,
-    viscous_stress,
-    korteweg_stress,
-    kappa_star,
     heat_flux,
+    internal_energy_loc,
     interstitial_working,
+    kappa_star,
+    korteweg_stress,
+    pressure,
+    viscous_stress,
 )
+
 
 def test_pressure_critical_point():
     p = pressure(1.0 / 3.0, 1.0, 1.4)

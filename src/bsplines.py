@@ -8,8 +8,8 @@ not through basis evaluation.
 
 Convention: open-uniform knot vectors, parametric domain [0, 1].
 """
-import numpy as np
 import jax.numpy as jnp
+import numpy as np
 from scipy.interpolate import BSpline
 
 

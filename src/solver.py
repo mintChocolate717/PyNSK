@@ -12,8 +12,9 @@ paths as the full PDE, so this phase can be validated before Phase B is merged.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any
 
 import jax
 import jax.numpy as jnp

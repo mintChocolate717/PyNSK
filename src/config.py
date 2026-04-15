@@ -309,20 +309,20 @@ def dump_problem(problem: Problem, path: str | Path) -> None:
 
 
 __all__ = [
-    "ConfigError",
-    "MeshSpec",
-    "DiscretizationSpec",
-    "TimeSpec",
-    "MaterialSpec",
-    "InitialSpec",
     "BoundarySpec",
+    "ConfigError",
+    "DiscretizationSpec",
+    "InitialSpec",
+    "MaterialSpec",
+    "MeshSpec",
     "OutputSpec",
     "Problem",
-    "load_problem",
-    "from_dict",
+    "TimeSpec",
     "dump_problem",
+    "from_dict",
+    "load_problem",
 ]
 
 
 # Suppress unused-imports warnings from static analysis
-_ = fields  # noqa: F401
+_ = fields

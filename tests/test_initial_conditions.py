@@ -15,7 +15,6 @@ import pytest
 from src.bsplines import make_knot_vector
 from src.initial_conditions import bubble_profile, from_bspline_projection
 
-
 GAMMA = 1.4
 
 

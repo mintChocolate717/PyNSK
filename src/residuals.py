@@ -146,7 +146,11 @@ def element_residual_momentum(
     div_q = phase_field_div(drho_dr_q, d2rho_dr2_q, dvartheta_dr_q, vartheta_q, r_q)
 
     # η = ρVϑ + ½ρu² + (1/We)ρϑ∇·(∇ρ/ϑ)
-    eta_q = rho_q * V_q * vartheta_q + 0.5 * rho_q * u_q**2 + (1.0 / We) * rho_q * vartheta_q * div_q
+    eta_q = (
+        rho_q * V_q * vartheta_q
+        + 0.5 * rho_q * u_q**2
+        + (1.0 / We) * rho_q * vartheta_q * div_q
+    )
 
     # ξ = Vϑ + ½u² + (1/We)ϑ∇·(∇ρ/ϑ)
     xi_q = V_q * vartheta_q + 0.5 * u_q**2 + (1.0 / We) * vartheta_q * div_q

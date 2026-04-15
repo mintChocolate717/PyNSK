@@ -39,7 +39,6 @@ from src.residuals import (
     element_residual_momentum,
 )
 
-
 # ── Element connectivity (IEN) ──────────────────────────────────────────────
 
 def element_connectivity(n_ctrl: int, degree: int) -> jnp.ndarray:

@@ -1,6 +1,7 @@
 """Tests for src/assembler.py — IEN, basis cache, global residual, BC helpers."""
 import jax
-jax.config.update("jax_enable_x64", True)  # noqa: E402 — explicit per task spec
+
+jax.config.update("jax_enable_x64", True)
 
 import jax.numpy as jnp  # noqa: E402
 import numpy as np  # noqa: E402
@@ -22,7 +23,6 @@ from src.residuals import (  # noqa: E402
     element_residual_mass,
     element_residual_momentum,
 )
-
 
 # ── shared fixtures ────────────────────────────────────────────────────────
 

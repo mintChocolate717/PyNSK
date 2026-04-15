@@ -14,7 +14,6 @@ from src.constitutive import (
     total_energy,
 )
 
-
 # ── free_energy_loc ───────────────────────────────────────────────────────────
 
 def test_free_energy_at_critical_point():

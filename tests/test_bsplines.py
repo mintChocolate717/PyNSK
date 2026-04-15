@@ -3,11 +3,11 @@
 Each test corresponds to a mathematical property that must hold for
 any correct B-spline implementation.
 """
-import numpy as np
 import jax.numpy as jnp
+import numpy as np
 import pytest
-from src.bsplines import make_knot_vector, basis_matrix, basis_deriv_matrix
 
+from src.bsplines import basis_deriv_matrix, basis_matrix, make_knot_vector
 
 # ── Knot vector ──────────────────────────────────────────────────────────────
 

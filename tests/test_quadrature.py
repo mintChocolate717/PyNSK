@@ -1,9 +1,9 @@
 """Tests for Gaussian quadrature (src/quadrature.py)."""
 import numpy as np
 import pytest
-from src.bsplines import make_knot_vector
-from src.quadrature import gauss_legendre, recommended_n_gauss, quadrature_points
 
+from src.bsplines import make_knot_vector
+from src.quadrature import gauss_legendre, quadrature_points, recommended_n_gauss
 
 # ── gauss_legendre ────────────────────────────────────────────────────────────
 

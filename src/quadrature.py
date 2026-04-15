@@ -15,8 +15,8 @@ Usage pattern:
     d2N = basis_deriv_matrix(xi_pts, knots, degree, 2) # (n_pts, n_ctrl)
     rho = N @ d_ctrl                                   # field at quad pts
 """
-import numpy as np
 import jax.numpy as jnp
+import numpy as np
 from numpy.polynomial.legendre import leggauss
 
 
@@ -79,7 +79,7 @@ def quadrature_points(
     xi_b_arr = unique_knots[1:]
 
     xi_all, r_all, w_all = [], [], []
-    for xi_a, xi_b in zip(xi_a_arr, xi_b_arr):
+    for xi_a, xi_b in zip(xi_a_arr, xi_b_arr, strict=True):
         xi_half = (xi_b - xi_a) / 2.0
         xi_mid  = (xi_b + xi_a) / 2.0
 

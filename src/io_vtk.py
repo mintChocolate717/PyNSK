@@ -22,12 +22,11 @@ from __future__ import annotations
 import csv
 import importlib.util
 import os
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 from xml.etree import ElementTree as ET
 
 import numpy as np
-
 
 _H5PY_AVAILABLE = importlib.util.find_spec("h5py") is not None
 _MESHIO_AVAILABLE = importlib.util.find_spec("meshio") is not None
@@ -85,7 +84,7 @@ def write_xdmf_timestep(
 
     # encode time as an integer step counter derived from t
     # caller is free to format the filename; we accept this simple rule.
-    step = int(round(t * 1.0e6)) if abs(t) < 1e3 else int(round(t))
+    step = round(t * 1.0e6) if abs(t) < 1e3 else round(t)
     tag = f"{stem}_t{step:09d}"
 
     if _H5PY_AVAILABLE:

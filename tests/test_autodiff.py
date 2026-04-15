@@ -21,7 +21,6 @@ from src.residuals import (
     element_residual_momentum,
 )
 
-
 # ── test fixture ──────────────────────────────────────────────────────────────
 
 DEGREE = 3

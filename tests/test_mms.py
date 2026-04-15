@@ -22,14 +22,13 @@ import jax.numpy as jnp
 import numpy as np
 import sympy as sp
 
+from src.constitutive import chemical_potential as _nu_loc
 from src.residuals import (
     element_residual_auxiliary,
     element_residual_energy,
     element_residual_mass,
     element_residual_momentum,
 )
-from src.constitutive import chemical_potential as _nu_loc
-
 
 # ── element + basis setup ─────────────────────────────────────────────────────
 
@@ -217,8 +216,10 @@ def test_mms_auxiliary_linear_rho_constant_V():
     coeff_N_expr  = V_val - (nu_expr - sp.Rational(1, 2) * u_val**2) / vt_val
     coeff_dN_expr = -drho_expr / (We * vt_val)
 
-    integrand_0_fn = sp.lambdify(r_sym, (N0 * coeff_N_expr + dN0 * coeff_dN_expr) * r_sym**2, modules="math")
-    integrand_1_fn = sp.lambdify(r_sym, (N1 * coeff_N_expr + dN1 * coeff_dN_expr) * r_sym**2, modules="math")
+    integrand_0_expr = (N0 * coeff_N_expr + dN0 * coeff_dN_expr) * r_sym**2
+    integrand_1_expr = (N1 * coeff_N_expr + dN1 * coeff_dN_expr) * r_sym**2
+    integrand_0_fn = sp.lambdify(r_sym, integrand_0_expr, modules="math")
+    integrand_1_fn = sp.lambdify(r_sym, integrand_1_expr, modules="math")
 
     R_ref = np.array([
         quad(integrand_0_fn, R0, R1, epsabs=1e-13, epsrel=1e-13)[0],

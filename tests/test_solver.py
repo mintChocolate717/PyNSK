@@ -26,7 +26,6 @@ from src.solver import (
     spectrum,
 )
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # GenAlphaParams
 # ─────────────────────────────────────────────────────────────────────────────
@@ -262,7 +261,7 @@ def test_step_history_records_newton_iterations():
 def test_stepper_wires_to_assembler():
     """If Phase B's assembler is present, the stepper must accept its contract."""
     try:
-        from src import assembler  # noqa: F401
+        from src import assembler
     except ImportError:
         pytest.skip("Phase B assembler not merged in this worktree")
 

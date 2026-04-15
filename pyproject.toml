@@ -56,7 +56,12 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Notebooks and tests are exempt from docstring rules (if we ever add D***).
-"tests/**/*.py" = ["D", "B018"]
+# Tests legitimately use:
+#   - RUF059: tuple unpacking where only some elements are needed
+#   - B017:   pytest.raises(Exception) for broad error-surface coverage
+#   - RUF043: pytest.raises match patterns with special regex chars
+#   - B905:   zip() without strict= in helpers
+"tests/**/*.py" = ["D", "B018", "RUF059", "B017", "RUF043", "B905"]
 "notebooks/**/*.ipynb" = ["D", "E402", "F401", "F811"]
 "docs/conf.py" = ["D", "E402"]
 
