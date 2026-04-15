@@ -78,12 +78,12 @@ def test_momentum_residual_shape():
     N, dN, d2N = _uniform_basis(N_QP, N_CTRL)
     r_q, w_q = _quad_data(N_QP)
     ctrl_rho = jnp.ones(N_CTRL) * 0.3
-    ctrl_theta = jnp.ones(N_CTRL) * 0.9
+    ctrl_vartheta = jnp.ones(N_CTRL) * 0.9
     zero = jnp.zeros(N_CTRL)
 
     R = element_residual_momentum(
         N, dN, N, dN, d2N, N, dN, N,
-        ctrl_rho, zero, zero, zero, ctrl_theta, zero,
+        ctrl_rho, zero, zero, zero, ctrl_vartheta, zero,
         r_q, w_q, J_E, RE, WE, GAMMA, 0.0,
     )
     assert R.shape == (N_CTRL,)
@@ -99,21 +99,21 @@ def test_momentum_residual_uniform_static():
     r_q, w_q = _quad_data(N_QP)
     zero = jnp.zeros(N_CTRL)
     ctrl_rho = jnp.ones(N_CTRL) * 0.3
-    ctrl_theta = jnp.ones(N_CTRL) * 1.0
+    ctrl_vartheta = jnp.ones(N_CTRL) * 1.0
 
     R = element_residual_momentum(
         N, dN, N, dN, d2N, N, dN, N,
-        ctrl_rho, zero, zero, zero, ctrl_theta, zero,
+        ctrl_rho, zero, zero, zero, ctrl_vartheta, zero,
         r_q, w_q, J_E, RE, WE, GAMMA, 0.0,
     )
     assert jnp.allclose(R, 0.0, atol=1e-12)
 
 
 def test_momentum_residual_uniform_expansion_no_stress():
-    """Uniform expansion u_r = C*r: viscous stress zero, with drho=0, dtheta=0."""
+    """Uniform expansion u_r = C*r: viscous stress zero, with drho=0, dvartheta=0."""
     # For u_r = C*r: du_dr = C, u_r/r = C → tau_rr = (4/3Re)(C-C) = 0
     # With drho=0: korteweg stress = 0
-    # With V=0, rho_dot=0, u_dot=0, drho=0, dtheta=0:
+    # With V=0, rho_dot=0, u_dot=0, drho=0, dvartheta=0:
     # coeff_dN = -rho*u² - eta + 0 + 0  where eta = 0 (V=0, div=0)
     #          = -rho*u²
     # coeff_N  = 0 - xi*0 - H*0 + (2/r)*(0 + 0 - eta) - rho*b_r = -(2/r)*eta
@@ -123,11 +123,11 @@ def test_momentum_residual_uniform_expansion_no_stress():
     r_q, w_q = _quad_data(N_QP)
     zero = jnp.zeros(N_CTRL)
     ctrl_rho = jnp.ones(N_CTRL) * 0.3
-    ctrl_theta = jnp.ones(N_CTRL) * 1.0
+    ctrl_vartheta = jnp.ones(N_CTRL) * 1.0
 
     R = element_residual_momentum(
         N, dN, N, dN, d2N, N, dN, N,
-        ctrl_rho, zero, zero, zero, ctrl_theta, zero,
+        ctrl_rho, zero, zero, zero, ctrl_vartheta, zero,
         r_q, w_q, J_E, RE, WE, GAMMA, 0.0,
     )
     assert jnp.allclose(R, 0.0, atol=1e-12)
@@ -139,12 +139,12 @@ def test_energy_residual_shape():
     N, dN, d2N = _uniform_basis(N_QP, N_CTRL)
     r_q, w_q = _quad_data(N_QP)
     zero = jnp.zeros(N_CTRL)
-    ctrl_theta = jnp.ones(N_CTRL) * 1.0
+    ctrl_vartheta = jnp.ones(N_CTRL) * 1.0
     ctrl_rho = jnp.ones(N_CTRL) * 0.3
 
     R = element_residual_energy(
         N, dN, N, dN, d2N, N, dN, N,
-        ctrl_rho, zero, zero, zero, ctrl_theta, zero, zero,
+        ctrl_rho, zero, zero, zero, ctrl_vartheta, zero, zero,
         r_q, w_q, J_E, RE, WE, GAMMA, PR, 0.0, 0.0,
     )
     assert R.shape == (N_CTRL,)
@@ -153,7 +153,7 @@ def test_energy_residual_shape():
 def test_energy_residual_static_uniform():
     """No flow, no time derivatives, no source, uniform fields → zero residual.
 
-    With u=0, drho=0, dtheta=0, all time derivatives=0, b_r=0, r_s=0, V=0:
+    With u=0, drho=0, dvartheta=0, all time derivatives=0, b_r=0, r_s=0, V=0:
     - β = ρVϑ - ϑH + 0 + 0 + 0 = -ϑH  (uniform fields so H = ρs is nonzero but...)
     - coeff_dN = (-β + 0 + 0)*u - 0 - 0 = 0  (u=0)
     - d_rhoE_dt = 0 (all time derivatives zero)
@@ -163,12 +163,12 @@ def test_energy_residual_static_uniform():
     N, dN, d2N = _uniform_basis(N_QP, N_CTRL)
     r_q, w_q = _quad_data(N_QP)
     zero = jnp.zeros(N_CTRL)
-    ctrl_theta = jnp.ones(N_CTRL) * 1.0
+    ctrl_vartheta = jnp.ones(N_CTRL) * 1.0
     ctrl_rho = jnp.ones(N_CTRL) * 0.3
 
     R = element_residual_energy(
         N, dN, N, dN, d2N, N, dN, N,
-        ctrl_rho, zero, zero, zero, ctrl_theta, zero, zero,
+        ctrl_rho, zero, zero, zero, ctrl_vartheta, zero, zero,
         r_q, w_q, J_E, RE, WE, GAMMA, PR, 0.0, 0.0,
     )
     assert jnp.allclose(R, 0.0, atol=1e-12)
@@ -181,12 +181,12 @@ def test_auxiliary_residual_shape():
     r_q, w_q = _quad_data(N_QP)
     zero = jnp.zeros(N_CTRL)
     ctrl_rho = jnp.ones(N_CTRL) * 0.3
-    ctrl_theta = jnp.ones(N_CTRL) * 1.0
+    ctrl_vartheta = jnp.ones(N_CTRL) * 1.0
     ctrl_V = jnp.zeros(N_CTRL)
 
     R = element_residual_auxiliary(
         N, dN, N, dN, N, N,
-        ctrl_rho, zero, ctrl_theta, ctrl_V,
+        ctrl_rho, zero, ctrl_vartheta, ctrl_V,
         r_q, w_q, J_E, WE, GAMMA,
     )
     assert R.shape == (N_CTRL,)
@@ -199,17 +199,17 @@ def test_auxiliary_residual_equilibrium():
     zero = jnp.zeros(N_CTRL)
 
     rho_val = 0.3
-    theta_val = 0.9
+    vartheta_val = 0.9
     ctrl_rho = jnp.ones(N_CTRL) * rho_val
-    ctrl_theta = jnp.ones(N_CTRL) * theta_val
+    ctrl_vartheta = jnp.ones(N_CTRL) * vartheta_val
 
     # V_eq = ν_loc(ρ, ϑ) / ϑ  so that V - (1/ϑ)(ν_loc - 0) = 0
-    nu_loc = chemical_potential(jnp.array(rho_val), jnp.array(theta_val), GAMMA)
-    ctrl_V = jnp.ones(N_CTRL) * float(nu_loc / theta_val)
+    nu_loc = chemical_potential(jnp.array(rho_val), jnp.array(vartheta_val), GAMMA)
+    ctrl_V = jnp.ones(N_CTRL) * float(nu_loc / vartheta_val)
 
     R = element_residual_auxiliary(
         N, dN, N, dN, N, N,
-        ctrl_rho, zero, ctrl_theta, ctrl_V,
+        ctrl_rho, zero, ctrl_vartheta, ctrl_V,
         r_q, w_q, J_E, WE, GAMMA,
     )
     assert jnp.allclose(R, 0.0, atol=1e-10)
@@ -221,12 +221,12 @@ def test_auxiliary_residual_zero_gradient():
     r_q, w_q = _quad_data(N_QP)
     zero = jnp.zeros(N_CTRL)
     ctrl_rho = jnp.ones(N_CTRL) * 0.3
-    ctrl_theta = jnp.ones(N_CTRL) * 0.9
+    ctrl_vartheta = jnp.ones(N_CTRL) * 0.9
     ctrl_V = jnp.ones(N_CTRL) * 0.5   # not at equilibrium
 
     R = element_residual_auxiliary(
         N, dN, N, dN, N, N,
-        ctrl_rho, zero, ctrl_theta, ctrl_V,
+        ctrl_rho, zero, ctrl_vartheta, ctrl_V,
         r_q, w_q, J_E, WE, GAMMA,
     )
     # dN is all zeros so dN^V/dr term vanishes; residual driven by coeff_N alone
@@ -241,7 +241,7 @@ def test_auxiliary_residual_zero_density_gradient_and_equilibrium_V():
     N, dN, _ = _uniform_basis(N_QP, N_CTRL)
     r_q, w_q = _quad_data(N_QP)
     ctrl_rho = jnp.ones(N_CTRL) * 0.25
-    ctrl_theta = jnp.ones(N_CTRL) * 1.1
+    ctrl_vartheta = jnp.ones(N_CTRL) * 1.1
     u_val = 0.5
     ctrl_u = jnp.ones(N_CTRL) * u_val
 
@@ -251,7 +251,7 @@ def test_auxiliary_residual_zero_density_gradient_and_equilibrium_V():
 
     R = element_residual_auxiliary(
         N, dN, N, dN, N, N,
-        ctrl_rho, ctrl_u, ctrl_theta, ctrl_V,
+        ctrl_rho, ctrl_u, ctrl_vartheta, ctrl_V,
         r_q, w_q, J_E, WE, GAMMA,
     )
     assert jnp.allclose(R, 0.0, atol=1e-10)
