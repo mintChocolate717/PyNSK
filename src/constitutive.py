@@ -11,6 +11,7 @@ import os
 
 import jax
 import jax.numpy as jnp
+from jax.experimental import checkify
 
 # Runtime guards on physical input ranges (0 < ρ < 1, ϑ > 0) are off by
 # default to keep hot paths branch-free. Flip the environment variable
@@ -31,19 +32,47 @@ def input_checks_enabled() -> bool:
 
 
 def _check_rho_vartheta(rho, vartheta):
-    """If enabled, assert 0 < ρ < 1 and ϑ > 0 at runtime (JIT-safe)."""
+    """If enabled, assert 0 < ρ < 1 and ϑ > 0 at runtime.
+
+    On the eager / concrete path (typical unit-test usage) this raises a
+    plain :class:`ValueError` so failures are easy to catch. Inside a
+    traced (``jit`` / ``vmap``) computation we fall back to
+    :func:`jax.experimental.checkify.check`, which is JIT-safe **provided
+    the caller wraps the top-level function in ``checkify.checkify``**.
+    When guards are disabled (the default) the fast path stays
+    completely branch-free.
+    """
     if not _CHECK_INPUTS:
         return
+
     rho_arr = jnp.asarray(rho)
     vartheta_arr = jnp.asarray(vartheta)
-    jax.debug.check(
-        jnp.all(rho_arr > 0.0) & jnp.all(rho_arr < 1.0),
-        "constitutive: density outside (0, 1)",
-    )
-    jax.debug.check(
-        jnp.all(vartheta_arr > 0.0),
-        "constitutive: temperature not strictly positive",
-    )
+
+    if isinstance(rho_arr, jax.core.Tracer) or isinstance(vartheta_arr, jax.core.Tracer):
+        # Traced path — defer to checkify (JIT-safe).
+        checkify.check(
+            jnp.all(rho_arr > 0.0) & jnp.all(rho_arr < 1.0),
+            "constitutive: density outside (0, 1)",
+        )
+        checkify.check(
+            jnp.all(vartheta_arr > 0.0),
+            "constitutive: temperature not strictly positive",
+        )
+        return
+
+    rho_np = jax.device_get(rho_arr)
+    vartheta_np = jax.device_get(vartheta_arr)
+
+    if not ((rho_np > 0.0).all() and (rho_np < 1.0).all()):
+        raise ValueError(
+            "constitutive input guard: density must satisfy 0 < rho < 1, "
+            f"got rho={rho_np!r}"
+        )
+    if not (vartheta_np > 0.0).all():
+        raise ValueError(
+            "constitutive input guard: temperature must satisfy vartheta > 0, "
+            f"got vartheta={vartheta_np!r}"
+        )
 
 
 def free_energy_loc(rho, vartheta, gamma):
