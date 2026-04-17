@@ -110,15 +110,21 @@ exclude_lines = [
 # ---------------------------------------------------------------------------
 [tool.mypy]
 python_version = "3.13"
-strict = true
+# Progressive typing: full `strict = true` is a stretch goal. For now we run a
+# reduced but still valuable ruleset — it catches real errors (wrong return
+# types, untyped-def bodies with bugs, dead ignores) without requiring every
+# function to be annotated. Individual modules can be ratcheted up later by
+# adding a per-module override.
 warn_unused_ignores = true
 warn_redundant_casts = true
+warn_no_return = true
+check_untyped_defs = true
 show_error_codes = true
 pretty = true
 exclude = ["notebooks/", "docs/", "build/", "dist/"]
 
-# JAX does not ship full stubs for everything we need; don't block the build on
-# missing imports within the JAX ecosystem.
+# JAX, scipy, and optional deps do not ship complete stubs — don't block the
+# build on missing imports within those ecosystems.
 [[tool.mypy.overrides]]
 module = [
     "jax",
@@ -127,5 +133,9 @@ module = [
     "jaxlib.*",
     "scipy",
     "scipy.*",
+    "h5py",
+    "h5py.*",
+    "meshio",
+    "meshio.*",
 ]
 ignore_missing_imports = true
