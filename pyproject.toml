@@ -1,0 +1,141 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pynsk"
+version = "0.1.0"
+description = "Isogeometric Analysis solver for the 1D spherically-symmetric Navier-Stokes-Korteweg equations"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [{ name = "PyNSK developers" }]
+dependencies = [
+    "numpy",
+    "scipy",
+    "jax[cpu]",
+    "pyyaml",         # used by src/config.py for problem-spec parsing
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "pre-commit",
+    "sympy",          # used by tests/test_mms.py for symbolic weak-form reference integrals
+    "types-PyYAML",   # mypy stubs for yaml
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+[tool.setuptools]
+package-dir = { "" = "." }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+# ---------------------------------------------------------------------------
+# Ruff — linter + formatter
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["notebooks", "docs/_build", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "NPY", "RUF", "UP", "SIM"]
+ignore = [
+    # Allow non-ASCII identifiers and comments — greek letters are common
+    # in this codebase (theta, rho, vartheta, etc.).
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Notebooks and tests are exempt from docstring rules (if we ever add D***).
+# Tests legitimately use:
+#   - RUF059: tuple unpacking where only some elements are needed
+#   - B017:   pytest.raises(Exception) for broad error-surface coverage
+#   - RUF043: pytest.raises match patterns with special regex chars
+#   - B905:   zip() without strict= in helpers
+"tests/**/*.py" = ["D", "B018", "RUF059", "B017", "RUF043", "B905"]
+"notebooks/**/*.ipynb" = ["D", "E402", "F401", "F811"]
+"docs/conf.py" = ["D", "E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "regression: long-running end-to-end regression tests (run manually in CI)",
+    "slow: tests that take more than a few seconds",
+]
+
+# ---------------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = [
+    "*/__init__.py",
+    "tests/*",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.13"
+# Progressive typing: full `strict = true` is a stretch goal. For now we run a
+# reduced but still valuable ruleset — it catches real errors (wrong return
+# types, untyped-def bodies with bugs, dead ignores) without requiring every
+# function to be annotated. Individual modules can be ratcheted up later by
+# adding a per-module override.
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_no_return = true
+check_untyped_defs = true
+show_error_codes = true
+pretty = true
+exclude = ["notebooks/", "docs/", "build/", "dist/"]
+
+# JAX, scipy, and optional deps do not ship complete stubs — don't block the
+# build on missing imports within those ecosystems.
+[[tool.mypy.overrides]]
+module = [
+    "jax",
+    "jax.*",
+    "jaxlib",
+    "jaxlib.*",
+    "scipy",
+    "scipy.*",
+    "h5py",
+    "h5py.*",
+    "meshio",
+    "meshio.*",
+]
+ignore_missing_imports = true
