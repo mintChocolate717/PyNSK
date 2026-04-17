@@ -7,6 +7,7 @@ variable ``PYNSK_CHECK_INPUTS=1``. When enabled, they assert::
     0 < ρ < 1       (van der Waals reduced density)
     ϑ > 0           (strictly positive temperature)
 """
+
 import jax
 import jax.numpy as jnp
 import pytest

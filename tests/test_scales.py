@@ -1,4 +1,5 @@
 """Tests for src/scales.py (D2)."""
+
 import numpy as np
 import pytest
 
@@ -59,8 +60,15 @@ def test_unknown_kind_raises(scales):
 def test_negative_scale_raises():
     with pytest.raises(ValueError):
         ReferenceScales(
-            rho_c=-1.0, vartheta_c=1.0, L_c=1.0, u_c=1.0, p_c=1.0,
-            Re=1.0, We=1.0, Pr=1.0, gamma=1.4,
+            rho_c=-1.0,
+            vartheta_c=1.0,
+            L_c=1.0,
+            u_c=1.0,
+            p_c=1.0,
+            Re=1.0,
+            We=1.0,
+            Pr=1.0,
+            gamma=1.4,
         )
 
 

@@ -36,6 +36,7 @@ Schema (all sections required unless marked optional):
 A ``Problem`` instance is a frozen nested dataclass. Each section keeps
 its own dataclass for clarity and discoverability.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field, fields
@@ -52,6 +53,7 @@ class ConfigError(ValueError):
 # ----------------------------------------------------------------------
 # sections
 # ----------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class MeshSpec:
@@ -124,6 +126,7 @@ class Problem:
 # validation helpers
 # ----------------------------------------------------------------------
 
+
 def _require_section(raw: dict, name: str) -> dict:
     if name not in raw:
         raise ConfigError(f"Missing required section {name!r}")
@@ -136,9 +139,7 @@ def _require_section(raw: dict, name: str) -> dict:
 def _require_keys(section: dict, name: str, required: tuple[str, ...]) -> None:
     missing = [k for k in required if k not in section]
     if missing:
-        raise ConfigError(
-            f"Section {name!r} is missing required field(s): {missing}"
-        )
+        raise ConfigError(f"Section {name!r} is missing required field(s): {missing}")
 
 
 def _coerce(value: Any, typ: type, name: str) -> Any:
@@ -164,6 +165,7 @@ def _nonneg(value: float, name: str) -> float:
 # loader
 # ----------------------------------------------------------------------
 
+
 def _load_mesh(raw: dict) -> MeshSpec:
     s = _require_section(raw, "mesh")
     _require_keys(s, "mesh", ("n_ctrl", "R_max"))
@@ -182,9 +184,7 @@ def _load_discretization(raw: dict, mesh: MeshSpec) -> DiscretizationSpec:
     if degree < 1:
         raise ConfigError("discretization.degree must be >= 1")
     if mesh.n_ctrl < degree + 1:
-        raise ConfigError(
-            f"mesh.n_ctrl ({mesh.n_ctrl}) must be >= degree + 1 ({degree + 1})"
-        )
+        raise ConfigError(f"mesh.n_ctrl ({mesh.n_ctrl}) must be >= degree + 1 ({degree + 1})")
     n_gauss = _coerce(s.get("n_gauss", degree + 1), int, "discretization.n_gauss")
     if n_gauss < degree + 1:
         raise ConfigError("discretization.n_gauss must be >= degree + 1")
@@ -217,7 +217,8 @@ def _load_material(raw: dict) -> MaterialSpec:
 def _load_initial(raw: dict) -> InitialSpec:
     s = _require_section(raw, "initial")
     _require_keys(
-        s, "initial",
+        s,
+        "initial",
         ("kind", "R_bubble", "interface_width", "rho_liq", "rho_vap", "vartheta_0"),
     )
     kind = str(s["kind"])
@@ -234,8 +235,12 @@ def _load_initial(raw: dict) -> InitialSpec:
         _coerce(s["vartheta_0"], float, "initial.vartheta_0"), "initial.vartheta_0"
     )
     return InitialSpec(
-        kind=kind, R_bubble=R_bubble, interface_width=interface_width,
-        rho_liq=rho_liq, rho_vap=rho_vap, vartheta_0=vartheta_0,
+        kind=kind,
+        R_bubble=R_bubble,
+        interface_width=interface_width,
+        rho_liq=rho_liq,
+        rho_vap=rho_vap,
+        vartheta_0=vartheta_0,
     )
 
 
@@ -295,8 +300,14 @@ def from_dict(raw: dict) -> Problem:
     out = _load_output(raw)
     meta = dict(raw.get("meta", {})) if isinstance(raw.get("meta"), dict) else {}
     return Problem(
-        mesh=mesh, discretization=disc, time=time, material=mat,
-        initial=ic, boundary=bc, output=out, meta=meta,
+        mesh=mesh,
+        discretization=disc,
+        time=time,
+        material=mat,
+        initial=ic,
+        boundary=bc,
+        output=out,
+        meta=meta,
     )
 
 

@@ -8,6 +8,7 @@ Verifies:
 - Control-point projection produces arrays of the right shape, keyed by
   {'rho', 'u', 'vartheta', 'V'}.
 """
+
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -82,8 +83,9 @@ def test_bubble_profile_uniform_temperature():
 
 def test_bubble_profile_keys():
     r = np.linspace(0.1, 0.9, 5)
-    out = bubble_profile(r=r, R_bubble=0.3, interface_width=0.05,
-                         rho_liq=0.6, rho_vap=0.05, vartheta_0=0.85)
+    out = bubble_profile(
+        r=r, R_bubble=0.3, interface_width=0.05, rho_liq=0.6, rho_vap=0.05, vartheta_0=0.85
+    )
     assert set(out.keys()) == {"rho", "u", "vartheta", "V"}
 
 
@@ -96,9 +98,7 @@ def test_projection_recovers_constant():
 
     c = 3.14159
 
-    ctrl = from_bspline_projection(
-        lambda r: c * np.ones_like(r), knots, degree, n_quad, R_max=1.0
-    )
+    ctrl = from_bspline_projection(lambda r: c * np.ones_like(r), knots, degree, n_quad, R_max=1.0)
     assert ctrl.shape == (n_ctrl,)
     # Partition-of-unity: each control coefficient equals the constant.
     assert jnp.allclose(ctrl, c, atol=1e-8)
@@ -155,10 +155,17 @@ def test_bubble_profile_control_points_mode():
     n_ctrl = 10
     knots = np.asarray(make_knot_vector(n_ctrl, degree))
     out = bubble_profile(
-        R_bubble=0.3, interface_width=0.05,
-        rho_liq=0.6, rho_vap=0.05, vartheta_0=0.85,
-        knots=knots, degree=degree, n_quad=degree + 2,
-        R_max=1.0, We=1.0, gamma=GAMMA,
+        R_bubble=0.3,
+        interface_width=0.05,
+        rho_liq=0.6,
+        rho_vap=0.05,
+        vartheta_0=0.85,
+        knots=knots,
+        degree=degree,
+        n_quad=degree + 2,
+        R_max=1.0,
+        We=1.0,
+        gamma=GAMMA,
     )
     assert set(out.keys()) == {"rho", "u", "vartheta", "V"}
     for field in ("rho", "u", "vartheta", "V"):
@@ -171,5 +178,6 @@ def test_bubble_profile_control_points_mode():
 
 def test_bubble_profile_requires_r_or_knots():
     with pytest.raises(ValueError):
-        bubble_profile(R_bubble=0.3, interface_width=0.05,
-                       rho_liq=0.6, rho_vap=0.05, vartheta_0=0.85)
+        bubble_profile(
+            R_bubble=0.3, interface_width=0.05, rho_liq=0.6, rho_vap=0.05, vartheta_0=0.85
+        )

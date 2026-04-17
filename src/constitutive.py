@@ -7,6 +7,7 @@ Primary scalar fields:
 The θθ stress components (``tau_tt``, ``varsigma_tt``) refer to the *polar*
 angle θ and must not be confused with the temperature ϑ.
 """
+
 import os
 
 import jax
@@ -65,8 +66,7 @@ def _check_rho_vartheta(rho, vartheta):
 
     if not ((rho_np > 0.0).all() and (rho_np < 1.0).all()):
         raise ValueError(
-            "constitutive input guard: density must satisfy 0 < rho < 1, "
-            f"got rho={rho_np!r}"
+            f"constitutive input guard: density must satisfy 0 < rho < 1, got rho={rho_np!r}"
         )
     if not (vartheta_np > 0.0).all():
         raise ValueError(
@@ -95,9 +95,9 @@ def pressure(rho, vartheta, gamma):
 def entropy(rho, vartheta, gamma):
     """Local specific entropy s(ρ, ϑ)."""
     _check_rho_vartheta(rho, vartheta)
-    return -(8.0 / 27.0) * jnp.log(rho / (1.0 - rho)) + (
-        8.0 / (27.0 * (gamma - 1.0))
-    ) * jnp.log(vartheta)
+    return -(8.0 / 27.0) * jnp.log(rho / (1.0 - rho)) + (8.0 / (27.0 * (gamma - 1.0))) * jnp.log(
+        vartheta
+    )
 
 
 def chemical_potential(rho, vartheta, gamma):

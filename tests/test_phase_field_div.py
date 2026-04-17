@@ -5,6 +5,7 @@ divergence ∇·(∇ρ/ϑ) written out under spherical symmetry::
 
     2/(r ϑ) ∂ρ/∂r − (1/ϑ²) (∂ϑ/∂r)(∂ρ/∂r) + (1/ϑ) ∂²ρ/∂r²
 """
+
 import jax.numpy as jnp
 import numpy as np
 
@@ -45,7 +46,7 @@ def test_constant_rho_returns_zero():
     r = jnp.linspace(0.5, 2.0, 6)
     drho_dr = jnp.zeros_like(r)
     d2rho_dr2 = jnp.zeros_like(r)
-    vartheta = 0.7 + 0.3 * jnp.cos(r)   # arbitrary nonzero ϑ profile
+    vartheta = 0.7 + 0.3 * jnp.cos(r)  # arbitrary nonzero ϑ profile
     dvartheta_dr = -0.3 * jnp.sin(r)
 
     got = phase_field_div(drho_dr, d2rho_dr2, dvartheta_dr, vartheta, r)
@@ -83,6 +84,7 @@ def test_matches_finite_difference_on_polynomial_field():
 
     # FD of (1/r²) d/dr [ r² (1/ϑ) ∂ρ/∂r ] using a small step
     eps = 1e-6
+
     def g(rv):
         return rv**2 * drho_of(rv) / vt_of(rv)
 

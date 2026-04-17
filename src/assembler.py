@@ -24,6 +24,7 @@ Each B-spline residual has bandwidth ≤ p+1, so the natural successor is
 BCOO / CSR storage.  Search for "TODO(sparse)" below for the single
 accumulation site that needs swapping.
 """
+
 from __future__ import annotations
 
 import jax
@@ -40,6 +41,7 @@ from src.residuals import (
 )
 
 # ── Element connectivity (IEN) ──────────────────────────────────────────────
+
 
 def element_connectivity(n_ctrl: int, degree: int) -> jnp.ndarray:
     """Local-to-global DOF map (IEN) for an open-uniform B-spline mesh.
@@ -61,15 +63,14 @@ def element_connectivity(n_ctrl: int, degree: int) -> jnp.ndarray:
     """
     n_elements = n_ctrl - degree
     if n_elements < 1:
-        raise ValueError(
-            f"n_ctrl ({n_ctrl}) must exceed degree ({degree}) by >=1"
-        )
+        raise ValueError(f"n_ctrl ({n_ctrl}) must exceed degree ({degree}) by >=1")
     rows = np.arange(n_elements)[:, None]
     cols = np.arange(degree + 1)[None, :]
     return jnp.asarray(rows + cols, dtype=jnp.int32)
 
 
 # ── Basis cache ─────────────────────────────────────────────────────────────
+
 
 def build_basis_cache(
     knots: jnp.ndarray,
@@ -120,15 +121,15 @@ def build_basis_cache(
 
     xi_pts, r_pts, w_pts = quadrature_points(knots, degree, n_gauss, R_max)
 
-    N_flat = basis_matrix(xi_pts, knots, degree)                     # (n_pts, n_ctrl)
-    dN_xi_flat = basis_deriv_matrix(xi_pts, knots, degree, 1)        # d/dξ
-    d2N_xi_flat = basis_deriv_matrix(xi_pts, knots, degree, 2)       # d²/dξ²
+    N_flat = basis_matrix(xi_pts, knots, degree)  # (n_pts, n_ctrl)
+    dN_xi_flat = basis_deriv_matrix(xi_pts, knots, degree, 1)  # d/dξ
+    d2N_xi_flat = basis_deriv_matrix(xi_pts, knots, degree, 2)  # d²/dξ²
 
     # chain rule: r = R_max * ξ → d/dr = (1/R_max) d/dξ
     dN_flat = dN_xi_flat / R_max
     d2N_flat = d2N_xi_flat / (R_max * R_max)
 
-    IEN = element_connectivity(n_ctrl, degree)                       # (n_elem, p+1)
+    IEN = element_connectivity(n_ctrl, degree)  # (n_elem, p+1)
 
     xi = xi_pts.reshape(n_elements, n_gauss)
     r = r_pts.reshape(n_elements, n_gauss)
@@ -151,9 +152,9 @@ def build_basis_cache(
 
     elem_idx = jnp.arange(n_elements)[:, None, None]
     qp_idx = jnp.arange(n_gauss)[None, :, None]
-    col_idx = IEN[:, None, :]                                        # (n_elem,1,p+1)
+    col_idx = IEN[:, None, :]  # (n_elem,1,p+1)
 
-    N = N_flat_re[elem_idx, qp_idx, col_idx]                         # (n_elem, n_gauss, p+1)
+    N = N_flat_re[elem_idx, qp_idx, col_idx]  # (n_elem, n_gauss, p+1)
     dN = dN_flat_re[elem_idx, qp_idx, col_idx]
     d2N = d2N_flat_re[elem_idx, qp_idx, col_idx]
 
@@ -175,11 +176,28 @@ def build_basis_cache(
 
 # ── Element-level helpers (vmapped) ─────────────────────────────────────────
 
+
 def _element_residuals(
-    N_e, dN_e, d2N_e, r_e, w_e, J_e, IEN_e,
-    ctrl_rho, ctrl_u, ctrl_vartheta, ctrl_V,
-    ctrl_rho_dot, ctrl_u_dot, ctrl_vartheta_dot,
-    Re, We, Pr, gamma, b_r, r_s,
+    N_e,
+    dN_e,
+    d2N_e,
+    r_e,
+    w_e,
+    J_e,
+    IEN_e,
+    ctrl_rho,
+    ctrl_u,
+    ctrl_vartheta,
+    ctrl_V,
+    ctrl_rho_dot,
+    ctrl_u_dot,
+    ctrl_vartheta_dot,
+    Re,
+    We,
+    Pr,
+    gamma,
+    b_r,
+    r_s,
 ):
     """Compute the four element residual vectors for a single element.
 
@@ -197,27 +215,81 @@ def _element_residuals(
     d_vth_dot = ctrl_vartheta_dot[IEN_e]
 
     R_rho = element_residual_mass(
-        N_e, dN_e, N_e,
-        d_rho, d_rho_dot, d_u,
-        r_e, w_e, J_e,
+        N_e,
+        dN_e,
+        N_e,
+        d_rho,
+        d_rho_dot,
+        d_u,
+        r_e,
+        w_e,
+        J_e,
     )
     R_u = element_residual_momentum(
-        N_e, dN_e, N_e, dN_e, d2N_e, N_e, dN_e, N_e,
-        d_rho, d_rho_dot, d_u, d_u_dot, d_vth, d_V,
-        r_e, w_e, J_e,
-        Re, We, gamma, b_r,
+        N_e,
+        dN_e,
+        N_e,
+        dN_e,
+        d2N_e,
+        N_e,
+        dN_e,
+        N_e,
+        d_rho,
+        d_rho_dot,
+        d_u,
+        d_u_dot,
+        d_vth,
+        d_V,
+        r_e,
+        w_e,
+        J_e,
+        Re,
+        We,
+        gamma,
+        b_r,
     )
     R_vth = element_residual_energy(
-        N_e, dN_e, N_e, dN_e, d2N_e, N_e, dN_e, N_e,
-        d_rho, d_rho_dot, d_u, d_u_dot, d_vth, d_vth_dot, d_V,
-        r_e, w_e, J_e,
-        Re, We, gamma, Pr, b_r, r_s,
+        N_e,
+        dN_e,
+        N_e,
+        dN_e,
+        d2N_e,
+        N_e,
+        dN_e,
+        N_e,
+        d_rho,
+        d_rho_dot,
+        d_u,
+        d_u_dot,
+        d_vth,
+        d_vth_dot,
+        d_V,
+        r_e,
+        w_e,
+        J_e,
+        Re,
+        We,
+        gamma,
+        Pr,
+        b_r,
+        r_s,
     )
     R_V = element_residual_auxiliary(
-        N_e, dN_e, N_e, dN_e, N_e, N_e,
-        d_rho, d_u, d_vth, d_V,
-        r_e, w_e, J_e,
-        We, gamma,
+        N_e,
+        dN_e,
+        N_e,
+        dN_e,
+        N_e,
+        N_e,
+        d_rho,
+        d_u,
+        d_vth,
+        d_V,
+        r_e,
+        w_e,
+        J_e,
+        We,
+        gamma,
     )
     return R_rho, R_u, R_vth, R_V
 
@@ -234,15 +306,31 @@ def _element_residuals_wrapper(cache_slice, ctrl, ctrl_dot, params):
     # Un-fold Jacobian: w_folded = w_ref * J_e  →  w_ref = w_folded / J_e
     w_ref_e = w_folded_e / J_e
     return _element_residuals(
-        N_e, dN_e, d2N_e, r_e, w_ref_e, J_e, IEN_e,
-        ctrl["rho"], ctrl["u"], ctrl["vartheta"], ctrl["V"],
-        ctrl_dot["rho"], ctrl_dot["u"], ctrl_dot["vartheta"],
-        params["Re"], params["We"], params["Pr"],
-        params["gamma"], params["b_r"], params["r_s"],
+        N_e,
+        dN_e,
+        d2N_e,
+        r_e,
+        w_ref_e,
+        J_e,
+        IEN_e,
+        ctrl["rho"],
+        ctrl["u"],
+        ctrl["vartheta"],
+        ctrl["V"],
+        ctrl_dot["rho"],
+        ctrl_dot["u"],
+        ctrl_dot["vartheta"],
+        params["Re"],
+        params["We"],
+        params["Pr"],
+        params["gamma"],
+        params["b_r"],
+        params["r_s"],
     )
 
 
 # ── Global assembly ─────────────────────────────────────────────────────────
+
 
 def assemble_residual(
     ctrl: dict,
@@ -293,12 +381,10 @@ def assemble_residual(
     # ``scipy.sparse``, replace the four dense ``segment_sum`` calls
     # below with accumulation into BCOO/CSR buffers (the IEN indices
     # already define the sparsity pattern).
-    flat_idx = IEN.reshape(-1)                                       # (n_elements*(p+1),)
+    flat_idx = IEN.reshape(-1)  # (n_elements*(p+1),)
 
     def _scatter(R_e_block):
-        return jax.ops.segment_sum(
-            R_e_block.reshape(-1), flat_idx, num_segments=n_ctrl
-        )
+        return jax.ops.segment_sum(R_e_block.reshape(-1), flat_idx, num_segments=n_ctrl)
 
     R_rho = _scatter(R_rho_e)
     R_u = _scatter(R_u_e)
@@ -309,6 +395,7 @@ def assemble_residual(
 
 
 # ── Boundary-condition helpers ──────────────────────────────────────────────
+
 
 def apply_dirichlet(
     R: jnp.ndarray,
@@ -414,7 +501,5 @@ def dirichlet_far_field(
         [offsets["rho"] + last, offsets["u"] + last, offsets["vartheta"] + last],
         dtype=jnp.int32,
     )
-    values = jnp.asarray(
-        [rho_inf, u_inf, vartheta_inf], dtype=jnp.float64
-    )
+    values = jnp.asarray([rho_inf, u_inf, vartheta_inf], dtype=jnp.float64)
     return dof_indices, values

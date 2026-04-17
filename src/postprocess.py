@@ -24,6 +24,7 @@ module works with whatever ``build_basis_cache`` ends up producing in
 Missing derivative matrices are tolerated when the quantity does not need
 them.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -44,6 +45,7 @@ from src.constitutive import (
 # ----------------------------------------------------------------------
 # cache helpers
 # ----------------------------------------------------------------------
+
 
 def _get(cache: Any, key: str, default=None):
     """Read ``key`` from cache whether it is a dict or an attribute bag."""
@@ -68,6 +70,7 @@ def _params_get(params: Any, key: str, default=None):
 # ----------------------------------------------------------------------
 # bubble radius
 # ----------------------------------------------------------------------
+
 
 def bubble_radius(rho_field, r_grid, threshold: float = 0.5) -> float:
     """Locate the iso-contour ``rho = threshold`` on ``r_grid`` by linear
@@ -98,6 +101,7 @@ def bubble_radius(rho_field, r_grid, threshold: float = 0.5) -> float:
 # ----------------------------------------------------------------------
 # energy integrals
 # ----------------------------------------------------------------------
+
 
 def _field_at_quadrature(cache: Any, ctrl: dict):
     r_q = jnp.asarray(_require(cache, "r_q"))
@@ -146,6 +150,7 @@ def total_internal_energy(ctrl: dict, cache: Any, params: Any) -> jnp.ndarray:
 # mass-conservation monitor
 # ----------------------------------------------------------------------
 
+
 def _mass_integral(ctrl_rho, cache):
     """∫ ρ r² dr using the quadrature cache."""
     r_q = jnp.asarray(_require(cache, "r_q"))
@@ -168,8 +173,7 @@ def mass_conservation_error(history, cache) -> jnp.ndarray:
     if not ctrl_list:
         return jnp.zeros((0,))
     M0 = _mass_integral(ctrl_list[0]["rho"], cache)
-    errors = [jnp.abs(_mass_integral(c["rho"], cache) - M0) / jnp.abs(M0)
-              for c in ctrl_list]
+    errors = [jnp.abs(_mass_integral(c["rho"], cache) - M0) / jnp.abs(M0) for c in ctrl_list]
     return jnp.stack(errors)
 
 
@@ -177,9 +181,8 @@ def mass_conservation_error(history, cache) -> jnp.ndarray:
 # entropy production
 # ----------------------------------------------------------------------
 
-def entropy_production_rate(
-    ctrl: dict, ctrl_dot: dict, cache: Any, params: Any
-) -> jnp.ndarray:
+
+def entropy_production_rate(ctrl: dict, ctrl_dot: dict, cache: Any, params: Any) -> jnp.ndarray:
     """Global entropy production rate.
 
     Aggregates the positive-semi-definite viscous, thermal, and Korteweg

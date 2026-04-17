@@ -140,6 +140,7 @@ def test_newton_linear_one_iteration():
 
 def test_newton_quadratic_convergence():
     """Newton on y² − 2 = 0 shows quadratic convergence."""
+
     def R(y):
         return y**2 - 2.0
 
@@ -163,13 +164,12 @@ def test_newton_quadratic_convergence():
 
 def test_newton_backtracking_activates():
     """Poor initial guess triggers backtracking without divergence."""
+
     # R(x) = x^3 - 1; far-from-root start.
     def R(x):
         return x**3 - 1.0
 
-    x, _, iters, hist = newton_solve(
-        R, jnp.array([10.0]), jnp.array([0.0]), tol=1e-10, max_iter=40
-    )
+    x, _, iters, hist = newton_solve(R, jnp.array([10.0]), jnp.array([0.0]), tol=1e-10, max_iter=40)
     assert abs(float(x[0]) - 1.0) < 1e-8
     # Residual must be monotone non-increasing (up to numerical noise)
     # thanks to the backtracking line-search.

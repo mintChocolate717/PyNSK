@@ -24,6 +24,7 @@ Dimensionless groups (functions of the fluid transport properties and L_c):
 
 All values are stored as Python floats and behave identically on CPU/GPU.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -104,9 +105,7 @@ class ReferenceScales:
             return self.t_c
         if kind == "length":
             return self.L_c
-        raise ValueError(
-            f"Unknown kind {kind!r}; expected one of {_ALLOWED_KINDS}"
-        )
+        raise ValueError(f"Unknown kind {kind!r}; expected one of {_ALLOWED_KINDS}")
 
     def nondimensionalize(self, dim_value, kind: Kind):
         """Convert a dimensional value to dimensionless form.
@@ -128,9 +127,9 @@ def default_water_vapor_scales(L_c: float = 1.0e-6) -> ReferenceScales:
     concrete set of scales is needed. Users wiring up a production problem
     should construct ``ReferenceScales`` explicitly.
     """
-    rho_c = 322.0        # kg/m^3  (water critical density, approx)
-    vartheta_c = 647.0   # K       (water critical temperature)
-    p_c = 22.064e6       # Pa      (water critical pressure)
+    rho_c = 322.0  # kg/m^3  (water critical density, approx)
+    vartheta_c = 647.0  # K       (water critical temperature)
+    p_c = 22.064e6  # Pa      (water critical pressure)
     u_c = (p_c / rho_c) ** 0.5
     return ReferenceScales(
         rho_c=rho_c,

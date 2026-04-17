@@ -1,4 +1,5 @@
 """Tests for src/assembler.py — IEN, basis cache, global residual, BC helpers."""
+
 import jax
 
 jax.config.update("jax_enable_x64", True)
@@ -29,8 +30,8 @@ from src.residuals import (  # noqa: E402
 R_MAX = 4.0
 DEGREE = 2
 N_GAUSS = 3
-N_ELEM = 4                  # 4 elements
-N_CTRL = N_ELEM + DEGREE    # 6 control points
+N_ELEM = 4  # 4 elements
+N_CTRL = N_ELEM + DEGREE  # 6 control points
 
 PARAMS = {
     "Re": 10.0,
@@ -53,6 +54,7 @@ def _zeros_ctrl(n_ctrl=N_CTRL):
 
 # ── IEN ────────────────────────────────────────────────────────────────────
 
+
 def test_ien_shape():
     IEN = element_connectivity(N_CTRL, DEGREE)
     assert IEN.shape == (N_ELEM, DEGREE + 1)
@@ -64,7 +66,7 @@ def test_ien_overlap():
     for e in range(N_ELEM - 1):
         shared = set(IEN[e]).intersection(IEN[e + 1])
         assert len(shared) == DEGREE, (
-            f"Elements {e} and {e+1} share {len(shared)} DOFs, expected {DEGREE}"
+            f"Elements {e} and {e + 1} share {len(shared)} DOFs, expected {DEGREE}"
         )
 
 
@@ -77,6 +79,7 @@ def test_ien_monotone_and_bounds():
 
 
 # ── Basis cache ────────────────────────────────────────────────────────────
+
 
 def test_basis_cache_shapes():
     cache = _make_cache()
@@ -105,6 +108,7 @@ def test_basis_cache_r_range():
 
 
 # ── Single-element assembly equals element residual ────────────────────────
+
 
 def test_single_element_mesh_equals_element_residual():
     """With 1 element, assembled global residual equals the element residual
@@ -137,7 +141,7 @@ def test_single_element_mesh_equals_element_residual():
     dN_e = cache["dN"][0]
     d2N_e = cache["d2N"][0]
     r_e = cache["r"][0]
-    w_e = cache["w"][0] / cache["J"][0]       # unfold the pre-folded Jacobian
+    w_e = cache["w"][0] / cache["J"][0]  # unfold the pre-folded Jacobian
     J_e = cache["J"][0]
     IEN_e = cache["IEN"][0]
 
@@ -149,26 +153,72 @@ def test_single_element_mesh_equals_element_residual():
     d_u_dot = ctrl_dot["u"][IEN_e]
     d_vth_dot = ctrl_dot["vartheta"][IEN_e]
 
-    R_rho_e = element_residual_mass(
-        N_e, dN_e, N_e, d_rho, d_rho_dot, d_u, r_e, w_e, J_e
-    )
+    R_rho_e = element_residual_mass(N_e, dN_e, N_e, d_rho, d_rho_dot, d_u, r_e, w_e, J_e)
     R_u_e = element_residual_momentum(
-        N_e, dN_e, N_e, dN_e, d2N_e, N_e, dN_e, N_e,
-        d_rho, d_rho_dot, d_u, d_u_dot, d_vth, d_V,
-        r_e, w_e, J_e,
-        PARAMS["Re"], PARAMS["We"], PARAMS["gamma"], PARAMS["b_r"],
+        N_e,
+        dN_e,
+        N_e,
+        dN_e,
+        d2N_e,
+        N_e,
+        dN_e,
+        N_e,
+        d_rho,
+        d_rho_dot,
+        d_u,
+        d_u_dot,
+        d_vth,
+        d_V,
+        r_e,
+        w_e,
+        J_e,
+        PARAMS["Re"],
+        PARAMS["We"],
+        PARAMS["gamma"],
+        PARAMS["b_r"],
     )
     R_vth_e = element_residual_energy(
-        N_e, dN_e, N_e, dN_e, d2N_e, N_e, dN_e, N_e,
-        d_rho, d_rho_dot, d_u, d_u_dot, d_vth, d_vth_dot, d_V,
-        r_e, w_e, J_e,
-        PARAMS["Re"], PARAMS["We"], PARAMS["gamma"],
-        PARAMS["Pr"], PARAMS["b_r"], PARAMS["r_s"],
+        N_e,
+        dN_e,
+        N_e,
+        dN_e,
+        d2N_e,
+        N_e,
+        dN_e,
+        N_e,
+        d_rho,
+        d_rho_dot,
+        d_u,
+        d_u_dot,
+        d_vth,
+        d_vth_dot,
+        d_V,
+        r_e,
+        w_e,
+        J_e,
+        PARAMS["Re"],
+        PARAMS["We"],
+        PARAMS["gamma"],
+        PARAMS["Pr"],
+        PARAMS["b_r"],
+        PARAMS["r_s"],
     )
     R_V_e = element_residual_auxiliary(
-        N_e, dN_e, N_e, dN_e, N_e, N_e,
-        d_rho, d_u, d_vth, d_V,
-        r_e, w_e, J_e, PARAMS["We"], PARAMS["gamma"],
+        N_e,
+        dN_e,
+        N_e,
+        dN_e,
+        N_e,
+        N_e,
+        d_rho,
+        d_u,
+        d_vth,
+        d_V,
+        r_e,
+        w_e,
+        J_e,
+        PARAMS["We"],
+        PARAMS["gamma"],
     )
 
     assert np.allclose(np.asarray(R[:n_ctrl]), np.asarray(R_rho_e), atol=1e-12)
@@ -178,6 +228,7 @@ def test_single_element_mesh_equals_element_residual():
 
 
 # ── Time-derivative linearity ──────────────────────────────────────────────
+
 
 def test_assembly_linearity():
     """Freeze the state; the residual is affine in ctrl_dot.
@@ -227,6 +278,7 @@ def test_assembly_linearity():
 
 # ── Equilibrium: zero flow + uniform fields + no sources → R = 0 ───────────
 
+
 def test_assembly_zero_on_equilibrium():
     """Zero velocity, uniform ρ and ϑ, V at chemical equilibrium, no body
     force, no heat source, all time derivatives zero.
@@ -263,9 +315,9 @@ def test_assembly_zero_on_equilibrium():
 
     # ρ, ϑ, V blocks are identically zero.
     R_np = np.asarray(R)
-    assert np.allclose(R_np[0:N_CTRL], 0.0, atol=1e-10)                  # ρ
-    assert np.allclose(R_np[2 * N_CTRL : 3 * N_CTRL], 0.0, atol=1e-10)    # ϑ
-    assert np.allclose(R_np[3 * N_CTRL : 4 * N_CTRL], 0.0, atol=1e-10)    # V
+    assert np.allclose(R_np[0:N_CTRL], 0.0, atol=1e-10)  # ρ
+    assert np.allclose(R_np[2 * N_CTRL : 3 * N_CTRL], 0.0, atol=1e-10)  # ϑ
+    assert np.allclose(R_np[3 * N_CTRL : 4 * N_CTRL], 0.0, atol=1e-10)  # V
 
     # u block: only the last DOF carries the far-field pressure term.
     R_u = R_np[N_CTRL : 2 * N_CTRL]
@@ -283,6 +335,7 @@ def test_assembly_zero_on_equilibrium():
 
 
 # ── Dirichlet BC application ──────────────────────────────────────────────
+
 
 def test_dirichlet_application():
     """After `apply_dirichlet`, a Newton step δ = -K^{-1} R drives
@@ -306,8 +359,9 @@ def test_dirichlet_application():
 
     # Residual entry: R_i = current_i - values_i → Newton δ_i = values_i - current_i
     Rm = np.asarray(R_mod)
-    assert np.allclose(Rm[np.asarray(dof_idx)],
-                       np.asarray(current)[np.asarray(dof_idx)] - np.asarray(values))
+    assert np.allclose(
+        Rm[np.asarray(dof_idx)], np.asarray(current)[np.asarray(dof_idx)] - np.asarray(values)
+    )
 
     # Solve the modified system and confirm values are hit.
     delta = np.linalg.solve(Km, -Rm)
@@ -334,6 +388,7 @@ def test_dirichlet_residual_only():
 
 # ── Symmetry & far-field helpers ──────────────────────────────────────────
 
+
 def test_symmetry_bc_at_origin():
     """`symmetry_bc_at_origin` returns the u-block DOF index at r=0 only.
 
@@ -342,14 +397,14 @@ def test_symmetry_bc_at_origin():
     dof_idx, values = symmetry_bc_at_origin(N_CTRL)
     # Exactly one constraint — the first u-DOF.
     assert dof_idx.shape == (1,)
-    assert int(dof_idx[0]) == N_CTRL   # start of the u block
+    assert int(dof_idx[0]) == N_CTRL  # start of the u block
     assert float(values[0]) == 0.0
 
     # Smoke-test that apply_dirichlet plays nicely.
     n_dof = 4 * N_CTRL
     R = jnp.ones(n_dof)
     K = jnp.eye(n_dof) * 2.0 + 0.1
-    current = jnp.zeros(n_dof).at[N_CTRL].set(0.7)   # u[0] currently 0.7
+    current = jnp.zeros(n_dof).at[N_CTRL].set(0.7)  # u[0] currently 0.7
     R_mod, K_mod = apply_dirichlet(R, K, dof_idx, values, current)
 
     delta = np.linalg.solve(np.asarray(K_mod), -np.asarray(R_mod))

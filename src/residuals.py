@@ -6,6 +6,7 @@ Naming convention:
     * ``tt`` / ``theta`` suffixes on stresses (``tau_tt``, ``sigma_tt``,
       ``ς_θθ``) refer to the **polar angle** θ. These stay named ``tt``.
 """
+
 import jax.numpy as jnp
 
 from src.constitutive import (
@@ -147,9 +148,7 @@ def element_residual_momentum(
 
     # η = ρVϑ + ½ρu² + (1/We)ρϑ∇·(∇ρ/ϑ)
     eta_q = (
-        rho_q * V_q * vartheta_q
-        + 0.5 * rho_q * u_q**2
-        + (1.0 / We) * rho_q * vartheta_q * div_q
+        rho_q * V_q * vartheta_q + 0.5 * rho_q * u_q**2 + (1.0 / We) * rho_q * vartheta_q * div_q
     )
 
     # ξ = Vϑ + ½u² + (1/We)ϑ∇·(∇ρ/ϑ)

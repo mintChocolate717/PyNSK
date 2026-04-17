@@ -3,6 +3,7 @@
 Each test corresponds to a mathematical property that must hold for
 any correct B-spline implementation.
 """
+
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from src.bsplines import basis_deriv_matrix, basis_matrix, make_knot_vector
 
 # ── Knot vector ──────────────────────────────────────────────────────────────
+
 
 def test_knot_vector_length():
     for n, p in [(5, 2), (10, 3), (4, 3), (6, 4)]:
@@ -20,8 +22,8 @@ def test_knot_vector_length():
 def test_knot_vector_open_ends():
     for p in [2, 3, 4]:
         t = np.asarray(make_knot_vector(p + 3, p))
-        assert np.allclose(t[:p+1], 0.0), "Left end not repeated correctly"
-        assert np.allclose(t[-(p+1):], 1.0), "Right end not repeated correctly"
+        assert np.allclose(t[: p + 1], 0.0), "Left end not repeated correctly"
+        assert np.allclose(t[-(p + 1) :], 1.0), "Right end not repeated correctly"
 
 
 def test_knot_vector_interior_uniform():
@@ -38,6 +40,7 @@ def test_knot_vector_invalid_raises():
 
 # ── Partition of unity ────────────────────────────────────────────────────────
 
+
 @pytest.mark.parametrize("degree", [2, 3, 4])
 def test_partition_of_unity(degree):
     """Sum of all basis functions equals 1 everywhere in [0, 1]."""
@@ -45,11 +48,13 @@ def test_partition_of_unity(degree):
     t = make_knot_vector(n_ctrl, degree)
     xi = jnp.linspace(0.0, 1.0, 100)
     N = basis_matrix(xi, t, degree)
-    assert np.allclose(np.asarray(N.sum(axis=1)), 1.0, atol=1e-12), \
+    assert np.allclose(np.asarray(N.sum(axis=1)), 1.0, atol=1e-12), (
         f"Partition of unity failed for degree {degree}"
+    )
 
 
 # ── Non-negativity ────────────────────────────────────────────────────────────
+
 
 def test_basis_nonnegative():
     """B-spline basis functions are non-negative."""
@@ -61,18 +66,20 @@ def test_basis_nonnegative():
 
 # ── Endpoint interpolation ────────────────────────────────────────────────────
 
+
 def test_endpoint_interpolation():
     """Open B-splines interpolate the first and last control points."""
     for degree in [2, 3, 4]:
         n_ctrl = degree + 4
         t = make_knot_vector(n_ctrl, degree)
-        N_left  = basis_matrix(jnp.array([0.0]), t, degree)
+        N_left = basis_matrix(jnp.array([0.0]), t, degree)
         N_right = basis_matrix(jnp.array([1.0]), t, degree)
-        assert abs(float(N_left[0, 0])  - 1.0) < 1e-12, "Left endpoint not interpolated"
+        assert abs(float(N_left[0, 0]) - 1.0) < 1e-12, "Left endpoint not interpolated"
         assert abs(float(N_right[0, -1]) - 1.0) < 1e-12, "Right endpoint not interpolated"
 
 
 # ── Derivatives ───────────────────────────────────────────────────────────────
+
 
 @pytest.mark.parametrize("order", [1, 2])
 def test_derivative_vs_finite_difference(order):
@@ -86,9 +93,10 @@ def test_derivative_vs_finite_difference(order):
     N_p = basis_deriv_matrix(xi0 + eps, t, degree, order=order - 1)
     N_m = basis_deriv_matrix(xi0 - eps, t, degree, order=order - 1)
     dN_fd = (N_p - N_m) / (2 * eps)
-    dN    = basis_deriv_matrix(xi0, t, degree, order=order)
-    assert np.allclose(np.asarray(dN), np.asarray(dN_fd), atol=1e-4), \
+    dN = basis_deriv_matrix(xi0, t, degree, order=order)
+    assert np.allclose(np.asarray(dN), np.asarray(dN_fd), atol=1e-4), (
         f"Order-{order} derivative failed finite difference test"
+    )
 
 
 def test_order_zero_equals_basis():
@@ -98,7 +106,7 @@ def test_order_zero_equals_basis():
     xi = jnp.linspace(0.0, 1.0, 30)
     assert np.allclose(
         np.asarray(basis_matrix(xi, t, degree)),
-        np.asarray(basis_deriv_matrix(xi, t, degree, order=0))
+        np.asarray(basis_deriv_matrix(xi, t, degree, order=0)),
     )
 
 

@@ -3,6 +3,7 @@
 These helpers are not (yet) called by any residual but are required for
 post-processing and diagnostics (Phase D). They stay in the public API.
 """
+
 import jax
 import jax.numpy as jnp
 
@@ -15,6 +16,7 @@ from src.constitutive import (
 )
 
 # ── free_energy_loc ───────────────────────────────────────────────────────────
+
 
 def test_free_energy_at_critical_point():
     """ψ_loc(ρ_c, ϑ_c) with (ρ_c = 1/3, ϑ_c = 1, γ = 1.4).
@@ -98,6 +100,7 @@ def test_free_energy_pressure_maxwell_identity():
 
 
 # ── total_energy ──────────────────────────────────────────────────────────────
+
 
 def test_total_energy_equals_components_sum():
     """ρE = ι_loc + (∂ρ/∂r)²/(2 We ρ) · ρ (really just plus the gradient

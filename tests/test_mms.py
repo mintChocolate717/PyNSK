@@ -33,7 +33,7 @@ from src.residuals import (
 # ── element + basis setup ─────────────────────────────────────────────────────
 
 R0, R1 = 0.5, 1.5
-J_E = 0.5 * (R1 - R0)   # r = 0.5*(xi_ref+1)*(R1-R0) + R0 => J = (R1-R0)/2
+J_E = 0.5 * (R1 - R0)  # r = 0.5*(xi_ref+1)*(R1-R0) + R0 => J = (R1-R0)/2
 
 
 def _hat_basis_at(xi_ref):
@@ -44,11 +44,14 @@ def _hat_basis_at(xi_ref):
     """
     N0 = 0.5 * (1.0 - xi_ref)
     N1 = 0.5 * (1.0 + xi_ref)
-    N = jnp.stack([N0, N1], axis=-1)       # (n_qp, 2)
-    dN_ref = jnp.stack([
-        -0.5 * jnp.ones_like(xi_ref),
-         0.5 * jnp.ones_like(xi_ref),
-    ], axis=-1)
+    N = jnp.stack([N0, N1], axis=-1)  # (n_qp, 2)
+    dN_ref = jnp.stack(
+        [
+            -0.5 * jnp.ones_like(xi_ref),
+            0.5 * jnp.ones_like(xi_ref),
+        ],
+        axis=-1,
+    )
     dN_phys = dN_ref / J_E
     d2N = jnp.zeros_like(N)
     return N, dN_phys, d2N
@@ -56,6 +59,7 @@ def _hat_basis_at(xi_ref):
 
 def _quad(n_gauss=6):
     from numpy.polynomial.legendre import leggauss
+
     xi, w = leggauss(n_gauss)
     xi = jnp.array(xi)
     w = jnp.array(w)
@@ -93,6 +97,7 @@ def _hat_sym():
 
 # ── MMS for the mass residual ────────────────────────────────────────────────
 
+
 def test_mms_mass_linear_rho_linear_u():
     """Piecewise-linear ρ, u; constant ρ̇.  R^ρ_C = ∫ [N_C ρ̇ − dN_C/dr · ρ u] r² dr."""
     xi_ref, r_q, w_q = _quad(n_gauss=6)
@@ -100,16 +105,26 @@ def test_mms_mass_linear_rho_linear_u():
 
     # Polynomial fields: ρ(r) = 0.2 + 0.1 r; u(r) = 0.05 r; ρ̇ constant.
     rho_expr = sp.Rational(1, 5) + sp.Rational(1, 10) * r_sym
-    u_expr   = sp.Rational(1, 20) * r_sym
+    u_expr = sp.Rational(1, 20) * r_sym
     rho_dot_val = sp.Rational(1, 100)  # 0.01
 
-    ctrl_rho     = _ctrl_from_poly(rho_expr)
-    ctrl_u       = _ctrl_from_poly(u_expr)
+    ctrl_rho = _ctrl_from_poly(rho_expr)
+    ctrl_u = _ctrl_from_poly(u_expr)
     ctrl_rho_dot = jnp.array([float(rho_dot_val)] * 2)
 
-    R_num = np.asarray(element_residual_mass(
-        N, dN, N, ctrl_rho, ctrl_rho_dot, ctrl_u, r_q, w_q, J_E,
-    ))
+    R_num = np.asarray(
+        element_residual_mass(
+            N,
+            dN,
+            N,
+            ctrl_rho,
+            ctrl_rho_dot,
+            ctrl_u,
+            r_q,
+            w_q,
+            J_E,
+        )
+    )
 
     # Analytic reference — note that the *integrated* field the code
     # sees is the piecewise-linear interpolant of rho_expr, u_expr
@@ -118,10 +133,12 @@ def test_mms_mass_linear_rho_linear_u():
     N0, N1, dN0, dN1 = _hat_sym()
     integrand_0 = (N0 * rho_dot_val - dN0 * rho_expr * u_expr) * r_sym**2
     integrand_1 = (N1 * rho_dot_val - dN1 * rho_expr * u_expr) * r_sym**2
-    R_ref = np.array([
-        float(sp.integrate(integrand_0, (r_sym, R0, R1))),
-        float(sp.integrate(integrand_1, (r_sym, R0, R1))),
-    ])
+    R_ref = np.array(
+        [
+            float(sp.integrate(integrand_0, (r_sym, R0, R1))),
+            float(sp.integrate(integrand_1, (r_sym, R0, R1))),
+        ]
+    )
 
     assert np.allclose(R_num, R_ref, atol=1e-12)
 
@@ -129,6 +146,7 @@ def test_mms_mass_linear_rho_linear_u():
 # ── MMS for the auxiliary residual (V defines chemical equilibrium) ──────────
 #
 # R^V_C = ∫ { N_C [ V − (ν_loc − ½u²)/ϑ ]  −  (dN_C/dr) · ∂ρ/∂r / (We ϑ) } r² dr
+
 
 def test_mms_auxiliary_zero_gradient_constant_V_matches_analytic():
     """Constant ρ, ϑ, u, V → analytic residual on a linear hat basis.
@@ -140,31 +158,47 @@ def test_mms_auxiliary_zero_gradient_constant_V_matches_analytic():
     N, dN, _ = _hat_basis_at(xi_ref)
 
     rho_val = 0.3
-    vt_val  = 1.1
-    u_val   = 0.4
-    V_val   = 0.2
-    gamma   = 1.4
-    We      = 100.0
+    vt_val = 1.1
+    u_val = 0.4
+    V_val = 0.2
+    gamma = 1.4
+    We = 100.0
 
     nu = float(_nu_loc(jnp.array(rho_val), jnp.array(vt_val), gamma))
     coeff_N = V_val - (nu - 0.5 * u_val**2) / vt_val
 
     ctrl_rho = jnp.array([rho_val] * 2)
-    ctrl_vt  = jnp.array([vt_val]  * 2)
-    ctrl_u   = jnp.array([u_val]   * 2)
-    ctrl_V   = jnp.array([V_val]   * 2)
+    ctrl_vt = jnp.array([vt_val] * 2)
+    ctrl_u = jnp.array([u_val] * 2)
+    ctrl_V = jnp.array([V_val] * 2)
 
-    R_num = np.asarray(element_residual_auxiliary(
-        N, dN, N, dN, N, N,
-        ctrl_rho, ctrl_u, ctrl_vt, ctrl_V,
-        r_q, w_q, J_E, We, gamma,
-    ))
+    R_num = np.asarray(
+        element_residual_auxiliary(
+            N,
+            dN,
+            N,
+            dN,
+            N,
+            N,
+            ctrl_rho,
+            ctrl_u,
+            ctrl_vt,
+            ctrl_V,
+            r_q,
+            w_q,
+            J_E,
+            We,
+            gamma,
+        )
+    )
 
     N0, N1, _, _ = _hat_sym()
-    R_ref = np.array([
-        coeff_N * float(sp.integrate(N0 * r_sym**2, (r_sym, R0, R1))),
-        coeff_N * float(sp.integrate(N1 * r_sym**2, (r_sym, R0, R1))),
-    ])
+    R_ref = np.array(
+        [
+            coeff_N * float(sp.integrate(N0 * r_sym**2, (r_sym, R0, R1))),
+            coeff_N * float(sp.integrate(N1 * r_sym**2, (r_sym, R0, R1))),
+        ]
+    )
 
     assert np.allclose(R_num, R_ref, atol=1e-12)
 
@@ -184,24 +218,38 @@ def test_mms_auxiliary_linear_rho_constant_V():
     N, dN, _ = _hat_basis_at(xi_ref)
 
     vt_val = 1.0
-    u_val  = 0.30
-    V_val  = 0.15
-    gamma  = 1.4
-    We     = 50.0
+    u_val = 0.30
+    V_val = 0.15
+    gamma = 1.4
+    We = 50.0
 
-    rho_expr    = sp.Rational(1, 4) + sp.Rational(2, 25) * r_sym
-    drho_expr   = sp.diff(rho_expr, r_sym)
+    rho_expr = sp.Rational(1, 4) + sp.Rational(2, 25) * r_sym
+    drho_expr = sp.diff(rho_expr, r_sym)
 
     ctrl_rho = _ctrl_from_poly(rho_expr)
-    ctrl_vt  = jnp.array([vt_val] * 2)
-    ctrl_u   = jnp.array([u_val]  * 2)
-    ctrl_V   = jnp.array([V_val]  * 2)
+    ctrl_vt = jnp.array([vt_val] * 2)
+    ctrl_u = jnp.array([u_val] * 2)
+    ctrl_V = jnp.array([V_val] * 2)
 
-    R_num = np.asarray(element_residual_auxiliary(
-        N, dN, N, dN, N, N,
-        ctrl_rho, ctrl_u, ctrl_vt, ctrl_V,
-        r_q, w_q, J_E, We, gamma,
-    ))
+    R_num = np.asarray(
+        element_residual_auxiliary(
+            N,
+            dN,
+            N,
+            dN,
+            N,
+            N,
+            ctrl_rho,
+            ctrl_u,
+            ctrl_vt,
+            ctrl_V,
+            r_q,
+            w_q,
+            J_E,
+            We,
+            gamma,
+        )
+    )
 
     N0, N1, dN0, dN1 = _hat_sym()
 
@@ -213,7 +261,7 @@ def test_mms_auxiliary_linear_rho_constant_V():
         - (8 * vt_val / (27 * (gamma - 1))) * sp.log(vt_val)
         + 8 * vt_val / (27 * (gamma - 1))
     )
-    coeff_N_expr  = V_val - (nu_expr - sp.Rational(1, 2) * u_val**2) / vt_val
+    coeff_N_expr = V_val - (nu_expr - sp.Rational(1, 2) * u_val**2) / vt_val
     coeff_dN_expr = -drho_expr / (We * vt_val)
 
     integrand_0_expr = (N0 * coeff_N_expr + dN0 * coeff_dN_expr) * r_sym**2
@@ -221,10 +269,12 @@ def test_mms_auxiliary_linear_rho_constant_V():
     integrand_0_fn = sp.lambdify(r_sym, integrand_0_expr, modules="math")
     integrand_1_fn = sp.lambdify(r_sym, integrand_1_expr, modules="math")
 
-    R_ref = np.array([
-        quad(integrand_0_fn, R0, R1, epsabs=1e-13, epsrel=1e-13)[0],
-        quad(integrand_1_fn, R0, R1, epsabs=1e-13, epsrel=1e-13)[0],
-    ])
+    R_ref = np.array(
+        [
+            quad(integrand_0_fn, R0, R1, epsabs=1e-13, epsrel=1e-13)[0],
+            quad(integrand_1_fn, R0, R1, epsabs=1e-13, epsrel=1e-13)[0],
+        ]
+    )
 
     assert np.allclose(R_num, R_ref, atol=1e-9)
 
@@ -235,6 +285,7 @@ def test_mms_auxiliary_linear_rho_constant_V():
 # manufactured field, and verify the quadrature error for a degree-p
 # basis falls as h^(p+1) (for a linear-hat basis: h^2).
 
+
 def _mass_residual_on_uniform_mesh(n_elem, rho_fn, u_fn, rho_dot_fn, n_gauss=4):
     """Return a global residual vector for the mass equation on a uniform
     radial mesh [R0, R1] using linear hats.
@@ -243,7 +294,7 @@ def _mass_residual_on_uniform_mesh(n_elem, rho_fn, u_fn, rho_dot_fn, n_gauss=4):
 
     xi_ref_np, w_ref_np = leggauss(n_gauss)
     xi_ref = jnp.array(xi_ref_np)
-    w_ref  = jnp.array(w_ref_np)
+    w_ref = jnp.array(w_ref_np)
 
     n_nodes = n_elem + 1
     edges = np.linspace(R0, R1, n_nodes)
@@ -257,19 +308,32 @@ def _mass_residual_on_uniform_mesh(n_elem, rho_fn, u_fn, rho_dot_fn, n_gauss=4):
         N0 = 0.5 * (1.0 - xi_ref)
         N1 = 0.5 * (1.0 + xi_ref)
         N = jnp.stack([N0, N1], axis=-1)
-        dN = jnp.stack([
-            -0.5 * jnp.ones_like(xi_ref) / J_e,
-             0.5 * jnp.ones_like(xi_ref) / J_e,
-        ], axis=-1)
+        dN = jnp.stack(
+            [
+                -0.5 * jnp.ones_like(xi_ref) / J_e,
+                0.5 * jnp.ones_like(xi_ref) / J_e,
+            ],
+            axis=-1,
+        )
 
-        ctrl_rho     = jnp.array([rho_fn(rL),     rho_fn(rR)])
-        ctrl_u       = jnp.array([u_fn(rL),       u_fn(rR)])
+        ctrl_rho = jnp.array([rho_fn(rL), rho_fn(rR)])
+        ctrl_u = jnp.array([u_fn(rL), u_fn(rR)])
         ctrl_rho_dot = jnp.array([rho_dot_fn(rL), rho_dot_fn(rR)])
 
-        R_e = np.asarray(element_residual_mass(
-            N, dN, N, ctrl_rho, ctrl_rho_dot, ctrl_u, r_q, w_ref, J_e,
-        ))
-        R_global[e]     += R_e[0]
+        R_e = np.asarray(
+            element_residual_mass(
+                N,
+                dN,
+                N,
+                ctrl_rho,
+                ctrl_rho_dot,
+                ctrl_u,
+                r_q,
+                w_ref,
+                J_e,
+            )
+        )
+        R_global[e] += R_e[0]
         R_global[e + 1] += R_e[1]
 
     return R_global, edges
@@ -288,9 +352,14 @@ def test_mms_mass_convergence_rate():
     """
     import math as m
 
-    def rho_fn(r):     return 0.3 + 0.05 * m.sin(r)
-    def u_fn(r):       return 0.10 * r * m.cos(r)
-    def rho_dot_fn(r): return 0.0
+    def rho_fn(r):
+        return 0.3 + 0.05 * m.sin(r)
+
+    def u_fn(r):
+        return 0.10 * r * m.cos(r)
+
+    def rho_dot_fn(r):
+        return 0.0
 
     # Compute residual max-norm on successive refinements
     ns = [4, 8, 16, 32, 64]
@@ -310,9 +379,7 @@ def test_mms_mass_convergence_rate():
     diffs = [abs(max_vals[i] - max_vals[i + 1]) for i in range(len(max_vals) - 1)]
     # Monotone decrease:
     for i in range(len(diffs) - 1):
-        assert diffs[i] >= diffs[i + 1] * 0.5, (
-            f"refinement diffs not decreasing: {diffs}"
-        )
+        assert diffs[i] >= diffs[i + 1] * 0.5, f"refinement diffs not decreasing: {diffs}"
 
     # And the residual itself stays finite
     assert all(np.isfinite(v) for v in max_vals)
@@ -320,78 +387,133 @@ def test_mms_mass_convergence_rate():
 
 # ── MMS for the momentum residual: static uniform body-force balance ─────────
 
+
 def test_mms_momentum_constant_body_force_on_constant_rho():
     """Uniform ρ, ϑ, V=0, u=0, constant body force b_r ⇒
-       R^u_C = − b_r ρ ∫ N_C r² dr  (all other terms drop).
+    R^u_C = − b_r ρ ∫ N_C r² dr  (all other terms drop).
     """
     xi_ref, r_q, w_q = _quad(n_gauss=4)
     N, dN, _ = _hat_basis_at(xi_ref)
 
     rho_val = 0.30
-    vt_val  = 1.00
-    b_r     = 0.05
-    gamma   = 1.4
-    Re      = 100.0
-    We      = 100.0
+    vt_val = 1.00
+    b_r = 0.05
+    gamma = 1.4
+    Re = 100.0
+    We = 100.0
 
     zero = jnp.zeros(2)
     ctrl_rho = jnp.array([rho_val] * 2)
-    ctrl_vt  = jnp.array([vt_val]  * 2)
+    ctrl_vt = jnp.array([vt_val] * 2)
 
-    R_num = np.asarray(element_residual_momentum(
-        N, dN, N, dN, jnp.zeros_like(N), N, dN, N,
-        ctrl_rho, zero, zero, zero, ctrl_vt, zero,
-        r_q, w_q, J_E, Re, We, gamma, b_r,
-    ))
+    R_num = np.asarray(
+        element_residual_momentum(
+            N,
+            dN,
+            N,
+            dN,
+            jnp.zeros_like(N),
+            N,
+            dN,
+            N,
+            ctrl_rho,
+            zero,
+            zero,
+            zero,
+            ctrl_vt,
+            zero,
+            r_q,
+            w_q,
+            J_E,
+            Re,
+            We,
+            gamma,
+            b_r,
+        )
+    )
 
     N0, N1, _, _ = _hat_sym()
-    R_ref = np.array([
-        -b_r * rho_val * float(sp.integrate(N0 * r_sym**2, (r_sym, R0, R1))),
-        -b_r * rho_val * float(sp.integrate(N1 * r_sym**2, (r_sym, R0, R1))),
-    ])
+    R_ref = np.array(
+        [
+            -b_r * rho_val * float(sp.integrate(N0 * r_sym**2, (r_sym, R0, R1))),
+            -b_r * rho_val * float(sp.integrate(N1 * r_sym**2, (r_sym, R0, R1))),
+        ]
+    )
     assert np.allclose(R_num, R_ref, atol=1e-12)
 
 
 # ── MMS for the energy residual: static uniform heat source balance ──────────
 
+
 def test_mms_energy_constant_heat_source_on_constant_rho():
     """Uniform ρ, ϑ, u=0, V=0, constant volumetric heat source r_s ⇒
-       R^ϑ_C = − ρ r_s ∫ N_C r² dr.
+    R^ϑ_C = − ρ r_s ∫ N_C r² dr.
     """
     xi_ref, r_q, w_q = _quad(n_gauss=4)
     N, dN, _ = _hat_basis_at(xi_ref)
 
     rho_val = 0.30
-    vt_val  = 1.00
-    r_s     = 0.02
-    gamma   = 1.4
-    Re      = 100.0
-    We      = 100.0
-    Pr      = 7.0
+    vt_val = 1.00
+    r_s = 0.02
+    gamma = 1.4
+    Re = 100.0
+    We = 100.0
+    Pr = 7.0
 
     zero = jnp.zeros(2)
     ctrl_rho = jnp.array([rho_val] * 2)
-    ctrl_vt  = jnp.array([vt_val]  * 2)
+    ctrl_vt = jnp.array([vt_val] * 2)
 
-    R_num = np.asarray(element_residual_energy(
-        N, dN, N, dN, jnp.zeros_like(N), N, dN, N,
-        ctrl_rho, zero, zero, zero, ctrl_vt, zero, zero,
-        r_q, w_q, J_E, Re, We, gamma, Pr, 0.0, r_s,
-    ))
+    R_num = np.asarray(
+        element_residual_energy(
+            N,
+            dN,
+            N,
+            dN,
+            jnp.zeros_like(N),
+            N,
+            dN,
+            N,
+            ctrl_rho,
+            zero,
+            zero,
+            zero,
+            ctrl_vt,
+            zero,
+            zero,
+            r_q,
+            w_q,
+            J_E,
+            Re,
+            We,
+            gamma,
+            Pr,
+            0.0,
+            r_s,
+        )
+    )
 
     N0, N1, _, _ = _hat_sym()
-    R_ref = np.array([
-        -rho_val * r_s * float(sp.integrate(N0 * r_sym**2, (r_sym, R0, R1))),
-        -rho_val * r_s * float(sp.integrate(N1 * r_sym**2, (r_sym, R0, R1))),
-    ])
+    R_ref = np.array(
+        [
+            -rho_val * r_s * float(sp.integrate(N0 * r_sym**2, (r_sym, R0, R1))),
+            -rho_val * r_s * float(sp.integrate(N1 * r_sym**2, (r_sym, R0, R1))),
+        ]
+    )
     assert np.allclose(R_num, R_ref, atol=1e-12)
 
 
 def test_mms_mass_patch_zero_velocity_constant_rho():
     """Patch test: ρ = const, u = 0, ρ̇ = 0 ⇒ R^ρ ≡ 0 for any mesh."""
-    def rho_fn(r):     return 0.3
-    def u_fn(r):       return 0.0
-    def rho_dot_fn(r): return 0.0
+
+    def rho_fn(r):
+        return 0.3
+
+    def u_fn(r):
+        return 0.0
+
+    def rho_dot_fn(r):
+        return 0.0
 
     for n in (3, 7, 15):
         R, _ = _mass_residual_on_uniform_mesh(n, rho_fn, u_fn, rho_dot_fn)

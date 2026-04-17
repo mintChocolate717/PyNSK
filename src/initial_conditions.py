@@ -9,6 +9,7 @@ Provides:
 Control-point dictionary keys follow the convention:
     'rho', 'u', 'vartheta', 'V'
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -24,9 +25,7 @@ from src.quadrature import quadrature_points
 def _gauss_on_element(
     knots: np.ndarray, degree: int, n_quad: int, R_max: float
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    xi_pts, r_pts, w_pts = quadrature_points(
-        jnp.asarray(knots), degree, n_quad, R_max
-    )
+    xi_pts, r_pts, w_pts = quadrature_points(jnp.asarray(knots), degree, n_quad, R_max)
     return np.asarray(xi_pts), np.asarray(r_pts), np.asarray(w_pts)
 
 
@@ -109,6 +108,7 @@ def bubble_profile(
        each field is L² projected onto the B-spline space and control-point
        arrays are returned.
     """
+
     def rho_fn(rr):
         rr = np.asarray(rr, dtype=np.float64)
         return 0.5 * (rho_liq + rho_vap) + 0.5 * (rho_liq - rho_vap) * np.tanh(
@@ -124,9 +124,7 @@ def bubble_profile(
     def V_fn(rr):
         rho_v = rho_fn(rr)
         theta_v = vartheta_fn(rr)
-        nu_loc = np.asarray(
-            chemical_potential(jnp.asarray(rho_v), jnp.asarray(theta_v), gamma)
-        )
+        nu_loc = np.asarray(chemical_potential(jnp.asarray(rho_v), jnp.asarray(theta_v), gamma))
         return nu_loc / theta_v
 
     if knots is None:
@@ -142,15 +140,11 @@ def bubble_profile(
 
     # Mode 2: B-spline projection
     if degree is None or n_quad is None:
-        raise ValueError(
-            "Control-point mode requires `knots`, `degree`, and `n_quad`."
-        )
+        raise ValueError("Control-point mode requires `knots`, `degree`, and `n_quad`.")
 
     return {
         "rho": from_bspline_projection(rho_fn, knots, degree, n_quad, R_max=R_max),
         "u": from_bspline_projection(u_fn, knots, degree, n_quad, R_max=R_max),
-        "vartheta": from_bspline_projection(
-            vartheta_fn, knots, degree, n_quad, R_max=R_max
-        ),
+        "vartheta": from_bspline_projection(vartheta_fn, knots, degree, n_quad, R_max=R_max),
         "V": from_bspline_projection(V_fn, knots, degree, n_quad, R_max=R_max),
     }

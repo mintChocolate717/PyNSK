@@ -1,4 +1,5 @@
 """Tests for src/config.py (D5)."""
+
 from pathlib import Path
 
 import pytest
@@ -22,8 +23,12 @@ def _minimal_dict():
         "time": {"dt": 1.0e-3, "t_end": 1.0, "rho_inf": 0.5},
         "material": {"Re": 100.0, "We": 1.0, "Pr": 7.0, "gamma": 1.4},
         "initial": {
-            "kind": "bubble", "R_bubble": 0.3, "interface_width": 0.05,
-            "rho_liq": 0.6, "rho_vap": 0.05, "vartheta_0": 0.85,
+            "kind": "bubble",
+            "R_bubble": 0.3,
+            "interface_width": 0.05,
+            "rho_liq": 0.6,
+            "rho_vap": 0.05,
+            "vartheta_0": 0.85,
         },
         "boundary": {"inner": "symmetry", "outer": "free"},
         "output": {"path": "out/run", "every": 10},

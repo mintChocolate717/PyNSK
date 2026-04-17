@@ -55,9 +55,7 @@ class GenAlphaParams:
         rho = float(self.rho_inf)
         object.__setattr__(self, "alpha_m", (2.0 - rho) / (1.0 + rho))
         object.__setattr__(self, "alpha_f", 1.0 / (1.0 + rho))
-        object.__setattr__(
-            self, "gamma", 0.5 + self.alpha_m - self.alpha_f
-        )
+        object.__setattr__(self, "gamma", 0.5 + self.alpha_m - self.alpha_f)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

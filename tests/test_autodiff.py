@@ -8,6 +8,7 @@ vector matches a central finite-difference estimate to ~1e-6 tolerance.
 This is the prerequisite for Phase C, which will assemble the global
 tangent stiffness K_tan from these same derivatives.
 """
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -46,30 +47,38 @@ def _mesh():
     xi_ref, w_ref = gauss_legendre(N_GAUSS)
     # Map Gauss nodes from [-1,1] to [0,1]
     xi_pts = 0.5 * (xi_ref + 1.0)
-    J_e = 0.5      # dξ_phys/dξ_ref (parametric Jacobian)
+    J_e = 0.5  # dξ_phys/dξ_ref (parametric Jacobian)
     R_MAX = 2.0
     r_q = R_MAX * xi_pts + 0.5  # shift to keep r away from 0
     w_q = w_ref
 
-    N   = basis_matrix(xi_pts, knots, DEGREE)
-    dN  = basis_deriv_matrix(xi_pts, knots, DEGREE, 1) / R_MAX  # chain rule
+    N = basis_matrix(xi_pts, knots, DEGREE)
+    dN = basis_deriv_matrix(xi_pts, knots, DEGREE, 1) / R_MAX  # chain rule
     d2N = basis_deriv_matrix(xi_pts, knots, DEGREE, 2) / R_MAX**2
     return N, dN, d2N, r_q, w_q, J_e
 
 
 def _random_controls(rng):
     """Physically-plausible random control points."""
-    ctrl_rho      = rng.uniform(0.15, 0.45, size=N_CTRL)
+    ctrl_rho = rng.uniform(0.15, 0.45, size=N_CTRL)
     ctrl_vartheta = rng.uniform(0.80, 1.20, size=N_CTRL)
-    ctrl_u        = rng.uniform(-0.20, 0.20, size=N_CTRL)
-    ctrl_V        = rng.uniform(-0.20, 0.20, size=N_CTRL)
-    ctrl_rho_dot  = rng.uniform(-0.05, 0.05, size=N_CTRL)
-    ctrl_u_dot    = rng.uniform(-0.05, 0.05, size=N_CTRL)
-    ctrl_vt_dot   = rng.uniform(-0.05, 0.05, size=N_CTRL)
-    return tuple(jnp.array(a) for a in (
-        ctrl_rho, ctrl_vartheta, ctrl_u, ctrl_V,
-        ctrl_rho_dot, ctrl_u_dot, ctrl_vt_dot,
-    ))
+    ctrl_u = rng.uniform(-0.20, 0.20, size=N_CTRL)
+    ctrl_V = rng.uniform(-0.20, 0.20, size=N_CTRL)
+    ctrl_rho_dot = rng.uniform(-0.05, 0.05, size=N_CTRL)
+    ctrl_u_dot = rng.uniform(-0.05, 0.05, size=N_CTRL)
+    ctrl_vt_dot = rng.uniform(-0.05, 0.05, size=N_CTRL)
+    return tuple(
+        jnp.array(a)
+        for a in (
+            ctrl_rho,
+            ctrl_vartheta,
+            ctrl_u,
+            ctrl_V,
+            ctrl_rho_dot,
+            ctrl_u_dot,
+            ctrl_vt_dot,
+        )
+    )
 
 
 def _fd_jacobian(f, x, eps=1e-6):
@@ -89,11 +98,21 @@ def _fd_jacobian(f, x, eps=1e-6):
 
 # ── mass ──────────────────────────────────────────────────────────────────────
 
+
 def _pack_mass(N, dN, r_q, w_q, J_e, ctrl_u, ctrl_rho_dot):
     def R(ctrl_rho):
         return element_residual_mass(
-            N, dN, N, ctrl_rho, ctrl_rho_dot, ctrl_u, r_q, w_q, J_e,
+            N,
+            dN,
+            N,
+            ctrl_rho,
+            ctrl_rho_dot,
+            ctrl_u,
+            r_q,
+            w_q,
+            J_e,
         )
+
     return R
 
 
@@ -110,15 +129,35 @@ def test_autodiff_mass_vs_fd():
 
 # ── momentum ─────────────────────────────────────────────────────────────────
 
-def _pack_momentum(N, dN, d2N, r_q, w_q, J_e,
-                   ctrl_rho, ctrl_rho_dot, ctrl_vartheta, ctrl_V,
-                   ctrl_u_dot):
+
+def _pack_momentum(
+    N, dN, d2N, r_q, w_q, J_e, ctrl_rho, ctrl_rho_dot, ctrl_vartheta, ctrl_V, ctrl_u_dot
+):
     def R(ctrl_u):
         return element_residual_momentum(
-            N, dN, N, dN, d2N, N, dN, N,
-            ctrl_rho, ctrl_rho_dot, ctrl_u, ctrl_u_dot, ctrl_vartheta, ctrl_V,
-            r_q, w_q, J_e, RE, WE, GAMMA, B_R,
+            N,
+            dN,
+            N,
+            dN,
+            d2N,
+            N,
+            dN,
+            N,
+            ctrl_rho,
+            ctrl_rho_dot,
+            ctrl_u,
+            ctrl_u_dot,
+            ctrl_vartheta,
+            ctrl_V,
+            r_q,
+            w_q,
+            J_e,
+            RE,
+            WE,
+            GAMMA,
+            B_R,
         )
+
     return R
 
 
@@ -126,8 +165,9 @@ def test_autodiff_momentum_vs_fd_wrt_u():
     rng = np.random.default_rng(2)
     N, dN, d2N, r_q, w_q, J_e = _mesh()
     ctrl_rho, ctrl_vt, ctrl_u, ctrl_V, ctrl_rho_dot, ctrl_u_dot, ctrl_vt_dot = _random_controls(rng)
-    R = _pack_momentum(N, dN, d2N, r_q, w_q, J_e,
-                       ctrl_rho, ctrl_rho_dot, ctrl_vt, ctrl_V, ctrl_u_dot)
+    R = _pack_momentum(
+        N, dN, d2N, r_q, w_q, J_e, ctrl_rho, ctrl_rho_dot, ctrl_vt, ctrl_V, ctrl_u_dot
+    )
     J_ad = np.asarray(jax.jacfwd(R)(ctrl_u))
     J_fd = _fd_jacobian(R, ctrl_u)
     assert np.allclose(J_ad, J_fd, atol=1e-6, rtol=1e-6)
@@ -140,9 +180,27 @@ def test_autodiff_momentum_vs_fd_wrt_rho():
 
     def R(cr):
         return element_residual_momentum(
-            N, dN, N, dN, d2N, N, dN, N,
-            cr, ctrl_rho_dot, ctrl_u, ctrl_u_dot, ctrl_vt, ctrl_V,
-            r_q, w_q, J_e, RE, WE, GAMMA, B_R,
+            N,
+            dN,
+            N,
+            dN,
+            d2N,
+            N,
+            dN,
+            N,
+            cr,
+            ctrl_rho_dot,
+            ctrl_u,
+            ctrl_u_dot,
+            ctrl_vt,
+            ctrl_V,
+            r_q,
+            w_q,
+            J_e,
+            RE,
+            WE,
+            GAMMA,
+            B_R,
         )
 
     J_ad = np.asarray(jax.jacfwd(R)(ctrl_rho))
@@ -153,6 +211,7 @@ def test_autodiff_momentum_vs_fd_wrt_rho():
 
 # ── energy ───────────────────────────────────────────────────────────────────
 
+
 def test_autodiff_energy_vs_fd_wrt_vartheta():
     rng = np.random.default_rng(4)
     N, dN, d2N, r_q, w_q, J_e = _mesh()
@@ -160,10 +219,30 @@ def test_autodiff_energy_vs_fd_wrt_vartheta():
 
     def R(cvt):
         return element_residual_energy(
-            N, dN, N, dN, d2N, N, dN, N,
-            ctrl_rho, ctrl_rho_dot, ctrl_u, ctrl_u_dot,
-            cvt, ctrl_vt_dot, ctrl_V,
-            r_q, w_q, J_e, RE, WE, GAMMA, PR, B_R, R_S,
+            N,
+            dN,
+            N,
+            dN,
+            d2N,
+            N,
+            dN,
+            N,
+            ctrl_rho,
+            ctrl_rho_dot,
+            ctrl_u,
+            ctrl_u_dot,
+            cvt,
+            ctrl_vt_dot,
+            ctrl_V,
+            r_q,
+            w_q,
+            J_e,
+            RE,
+            WE,
+            GAMMA,
+            PR,
+            B_R,
+            R_S,
         )
 
     J_ad = np.asarray(jax.jacfwd(R)(ctrl_vt))
@@ -178,10 +257,30 @@ def test_autodiff_energy_vs_fd_wrt_u():
 
     def R(cu):
         return element_residual_energy(
-            N, dN, N, dN, d2N, N, dN, N,
-            ctrl_rho, ctrl_rho_dot, cu, ctrl_u_dot,
-            ctrl_vt, ctrl_vt_dot, ctrl_V,
-            r_q, w_q, J_e, RE, WE, GAMMA, PR, B_R, R_S,
+            N,
+            dN,
+            N,
+            dN,
+            d2N,
+            N,
+            dN,
+            N,
+            ctrl_rho,
+            ctrl_rho_dot,
+            cu,
+            ctrl_u_dot,
+            ctrl_vt,
+            ctrl_vt_dot,
+            ctrl_V,
+            r_q,
+            w_q,
+            J_e,
+            RE,
+            WE,
+            GAMMA,
+            PR,
+            B_R,
+            R_S,
         )
 
     J_ad = np.asarray(jax.jacfwd(R)(ctrl_u))
@@ -191,6 +290,7 @@ def test_autodiff_energy_vs_fd_wrt_u():
 
 # ── auxiliary ────────────────────────────────────────────────────────────────
 
+
 def test_autodiff_auxiliary_vs_fd_wrt_V():
     rng = np.random.default_rng(6)
     N, dN, d2N, r_q, w_q, J_e = _mesh()
@@ -198,9 +298,21 @@ def test_autodiff_auxiliary_vs_fd_wrt_V():
 
     def R(cv):
         return element_residual_auxiliary(
-            N, dN, N, dN, N, N,
-            ctrl_rho, ctrl_u, ctrl_vt, cv,
-            r_q, w_q, J_e, WE, GAMMA,
+            N,
+            dN,
+            N,
+            dN,
+            N,
+            N,
+            ctrl_rho,
+            ctrl_u,
+            ctrl_vt,
+            cv,
+            r_q,
+            w_q,
+            J_e,
+            WE,
+            GAMMA,
         )
 
     J_ad = np.asarray(jax.jacfwd(R)(ctrl_V))
@@ -215,9 +327,21 @@ def test_autodiff_auxiliary_vs_fd_wrt_rho():
 
     def R(cr):
         return element_residual_auxiliary(
-            N, dN, N, dN, N, N,
-            cr, ctrl_u, ctrl_vt, ctrl_V,
-            r_q, w_q, J_e, WE, GAMMA,
+            N,
+            dN,
+            N,
+            dN,
+            N,
+            N,
+            cr,
+            ctrl_u,
+            ctrl_vt,
+            ctrl_V,
+            r_q,
+            w_q,
+            J_e,
+            WE,
+            GAMMA,
         )
 
     J_ad = np.asarray(jax.jacfwd(R)(ctrl_rho))
@@ -226,6 +350,7 @@ def test_autodiff_auxiliary_vs_fd_wrt_rho():
 
 
 # ── sanity: reverse-mode agrees with forward-mode ────────────────────────────
+
 
 def test_reverse_mode_matches_forward_mode_mass():
     """jacrev and jacfwd must return the same Jacobian."""

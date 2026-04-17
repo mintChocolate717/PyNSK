@@ -17,6 +17,7 @@ reader can load the time series, although it requires the user to select
 the "Line Chart View". This fallback is documented both here and in the
 generated file headers.
 """
+
 from __future__ import annotations
 
 import csv
@@ -73,9 +74,7 @@ def write_xdmf_timestep(
     fields = {name: _as_float_1d(arr) for name, arr in fields_dict.items()}
     for name, arr in fields.items():
         if arr.shape[0] != n:
-            raise ValueError(
-                f"Field {name!r} has shape {arr.shape}, expected ({n},)"
-            )
+            raise ValueError(f"Field {name!r} has shape {arr.shape}, expected ({n},)")
 
     base = Path(os.fspath(path))
     base_dir = base.parent
@@ -96,9 +95,14 @@ def write_xdmf_timestep(
 # XDMF + HDF5 path
 # ----------------------------------------------------------------------
 
+
 def _write_xdmf_h5(
-    base_dir: Path, stem: str, tag: str, t: float,
-    r_grid: np.ndarray, fields: dict[str, np.ndarray],
+    base_dir: Path,
+    stem: str,
+    tag: str,
+    t: float,
+    r_grid: np.ndarray,
+    fields: dict[str, np.ndarray],
 ) -> dict[str, Path]:
     import h5py  # local import, optional dependency
 
@@ -111,8 +115,7 @@ def _write_xdmf_h5(
         coords[:, 0] = r_grid
         fh.create_dataset("geometry/XYZ", data=coords)
         # topology: polyline with N-1 edges
-        edges = np.stack([np.arange(r_grid.size - 1),
-                          np.arange(1, r_grid.size)], axis=1)
+        edges = np.stack([np.arange(r_grid.size - 1), np.arange(1, r_grid.size)], axis=1)
         fh.create_dataset("topology/edges", data=edges.astype(np.int64))
         for name, arr in fields.items():
             fh.create_dataset(f"fields/{name}", data=arr)
@@ -120,37 +123,54 @@ def _write_xdmf_h5(
     xdmf = ET.Element("Xdmf", Version="3.0")
     domain = ET.SubElement(xdmf, "Domain")
     grid = ET.SubElement(
-        domain, "Grid", Name=stem, GridType="Uniform",
+        domain,
+        "Grid",
+        Name=stem,
+        GridType="Uniform",
     )
     ET.SubElement(grid, "Time", Value=f"{t:.17g}")
 
     topology = ET.SubElement(
-        grid, "Topology",
-        TopologyType="Polyline", NumberOfElements=str(r_grid.size - 1),
+        grid,
+        "Topology",
+        TopologyType="Polyline",
+        NumberOfElements=str(r_grid.size - 1),
         NodesPerElement="2",
     )
     ET.SubElement(
-        topology, "DataItem",
-        Dimensions=f"{r_grid.size - 1} 2", NumberType="Int",
-        Precision="8", Format="HDF",
+        topology,
+        "DataItem",
+        Dimensions=f"{r_grid.size - 1} 2",
+        NumberType="Int",
+        Precision="8",
+        Format="HDF",
     ).text = f"{h5_path.name}:/topology/edges"
 
     geom = ET.SubElement(grid, "Geometry", GeometryType="XYZ")
     ET.SubElement(
-        geom, "DataItem",
-        Dimensions=f"{r_grid.size} 3", NumberType="Float",
-        Precision="8", Format="HDF",
+        geom,
+        "DataItem",
+        Dimensions=f"{r_grid.size} 3",
+        NumberType="Float",
+        Precision="8",
+        Format="HDF",
     ).text = f"{h5_path.name}:/geometry/XYZ"
 
     for name in fields:
         attr = ET.SubElement(
-            grid, "Attribute",
-            Name=name, AttributeType="Scalar", Center="Node",
+            grid,
+            "Attribute",
+            Name=name,
+            AttributeType="Scalar",
+            Center="Node",
         )
         ET.SubElement(
-            attr, "DataItem",
-            Dimensions=f"{r_grid.size}", NumberType="Float",
-            Precision="8", Format="HDF",
+            attr,
+            "DataItem",
+            Dimensions=f"{r_grid.size}",
+            NumberType="Float",
+            Precision="8",
+            Format="HDF",
         ).text = f"{h5_path.name}:/fields/{name}"
 
     tree = ET.ElementTree(xdmf)
@@ -163,24 +183,25 @@ def _write_xdmf_h5(
 # CSV + PVD fallback
 # ----------------------------------------------------------------------
 
+
 def _write_csv_pvd(
-    base_dir: Path, stem: str, tag: str, t: float,
-    r_grid: np.ndarray, fields: dict[str, np.ndarray],
+    base_dir: Path,
+    stem: str,
+    tag: str,
+    t: float,
+    r_grid: np.ndarray,
+    fields: dict[str, np.ndarray],
 ) -> dict[str, Path]:
     csv_path = base_dir / f"{tag}.csv"
     pvd_path = base_dir / f"{stem}.pvd"
 
     field_names = list(fields)
     with csv_path.open("w", newline="") as fh:
-        fh.write(
-            f"# t={t:.17g} (CSV fallback: h5py not available)\n"
-        )
+        fh.write(f"# t={t:.17g} (CSV fallback: h5py not available)\n")
         writer = csv.writer(fh)
         writer.writerow(["r", *field_names])
         for i in range(r_grid.size):
-            writer.writerow(
-                [float(r_grid[i])] + [float(fields[n][i]) for n in field_names]
-            )
+            writer.writerow([float(r_grid[i])] + [float(fields[n][i]) for n in field_names])
 
     # Update (or create) the .pvd wrapper by re-scanning existing CSVs in the dir
     _rewrite_pvd(pvd_path, base_dir, stem)
@@ -193,7 +214,7 @@ def _rewrite_pvd(pvd_path: Path, base_dir: Path, stem: str) -> None:
     prefix = f"{stem}_t"
     for entry in sorted(base_dir.iterdir()):
         if entry.is_file() and entry.suffix == ".csv" and entry.stem.startswith(prefix):
-            tag = entry.stem[len(prefix):]
+            tag = entry.stem[len(prefix) :]
             try:
                 step = int(tag)
             except ValueError:
@@ -204,8 +225,12 @@ def _rewrite_pvd(pvd_path: Path, base_dir: Path, stem: str) -> None:
     coll = ET.SubElement(vtk, "Collection")
     for step, fname in files:
         ET.SubElement(
-            coll, "DataSet",
-            timestep=str(step), group="", part="0", file=fname,
+            coll,
+            "DataSet",
+            timestep=str(step),
+            group="",
+            part="0",
+            file=fname,
         )
 
     tree = ET.ElementTree(vtk)
@@ -222,8 +247,7 @@ def read_csv_snapshot(path: str | os.PathLike) -> tuple[np.ndarray, dict[str, np
         while line.startswith("#"):
             line = fh.readline()
         headers = [h.strip() for h in line.rstrip("\n").split(",")]
-        rows = [[float(x) for x in row.rstrip("\n").split(",")]
-                for row in fh if row.strip()]
+        rows = [[float(x) for x in row.rstrip("\n").split(",")] for row in fh if row.strip()]
     data = np.array(rows, dtype=np.float64)
     r = data[:, 0]
     fields = {h: data[:, i + 1] for i, h in enumerate(headers[1:])}

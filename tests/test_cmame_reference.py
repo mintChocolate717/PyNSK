@@ -28,6 +28,7 @@ The γ = 1.4 and Pr = 7 choices match the air / water defaults cited in
 the CMAME paper's numerical examples (Tables 1–2). We = 100 is a common
 diffuse-interface choice.
 """
+
 import math
 
 import jax.numpy as jnp
@@ -42,14 +43,15 @@ from src.constitutive import (
 
 # ── Closed-form analytic references ──────────────────────────────────────────
 
+
 def _p_ref(rho, vt):
     return 8.0 * rho * vt / (27.0 * (1.0 - rho)) - rho**2
 
 
 def _s_ref(rho, vt, gamma):
-    return -(8.0 / 27.0) * math.log(rho / (1.0 - rho)) + (
-        8.0 / (27.0 * (gamma - 1.0))
-    ) * math.log(vt)
+    return -(8.0 / 27.0) * math.log(rho / (1.0 - rho)) + (8.0 / (27.0 * (gamma - 1.0))) * math.log(
+        vt
+    )
 
 
 def _iota_ref(rho, vt, gamma):
@@ -62,11 +64,11 @@ def _kappa_ref(Re, Pr, gamma):
 
 FIXTURE = [
     # (name, rho, vartheta, gamma, Re, Pr, We)
-    ("critical_point",             1.0 / 3.0, 1.00, 1.4, 100.0, 7.0, 100.0),
-    ("vapour_subcritical",         0.05,      0.85, 1.4, 100.0, 7.0, 100.0),
-    ("liquid_subcritical",         0.70,      0.85, 1.4, 100.0, 7.0, 100.0),
-    ("supercritical_hot",          0.25,      1.50, 1.4, 100.0, 7.0, 100.0),
-    ("alt_gamma_and_prandtl",      0.30,      1.10, 1.2,  50.0, 1.0, 200.0),
+    ("critical_point", 1.0 / 3.0, 1.00, 1.4, 100.0, 7.0, 100.0),
+    ("vapour_subcritical", 0.05, 0.85, 1.4, 100.0, 7.0, 100.0),
+    ("liquid_subcritical", 0.70, 0.85, 1.4, 100.0, 7.0, 100.0),
+    ("supercritical_hot", 0.25, 1.50, 1.4, 100.0, 7.0, 100.0),
+    ("alt_gamma_and_prandtl", 0.30, 1.10, 1.2, 50.0, 1.0, 200.0),
 ]
 
 
@@ -106,16 +108,17 @@ HAND_VALUES = [
     # (rho, vt, gamma, p_exact, s_exact, iota_exact)
     # Critical point: ρ=1/3, ϑ=1, γ=1.4. p = 1/27.
     # s = −(8/27) log(1/2) + 0 = (8/27) log 2 > 0.
-    (1.0 / 3.0, 1.0, 1.4,
-     1.0 / 27.0,
-     -(8.0 / 27.0) * math.log(0.5),
-     -1.0 / 3.0 + 8.0 / (27.0 * 0.4)),
+    (
+        1.0 / 3.0,
+        1.0,
+        1.4,
+        1.0 / 27.0,
+        -(8.0 / 27.0) * math.log(0.5),
+        -1.0 / 3.0 + 8.0 / (27.0 * 0.4),
+    ),
     # Midpoint: ρ=1/2, ϑ=1, γ=1.4. p = 8/27 − 1/4.
     # At ρ=1/2: ρ/(1−ρ) = 1, log = 0, so s = 0 + 0 = 0.
-    (0.5, 1.0, 1.4,
-     8.0 / 27.0 - 0.25,
-     0.0,
-     -0.5 + 8.0 / (27.0 * 0.4)),
+    (0.5, 1.0, 1.4, 8.0 / 27.0 - 0.25, 0.0, -0.5 + 8.0 / (27.0 * 0.4)),
 ]
 
 
@@ -123,15 +126,21 @@ HAND_VALUES = [
 def test_hand_computed_reference_values(rho, vt, gamma, p_exact, s_exact, iota_exact):
     assert math.isclose(
         float(pressure(jnp.array(rho), jnp.array(vt), gamma)),
-        p_exact, rel_tol=1e-12, abs_tol=1e-14,
+        p_exact,
+        rel_tol=1e-12,
+        abs_tol=1e-14,
     )
     assert math.isclose(
         float(entropy(jnp.array(rho), jnp.array(vt), gamma)),
-        s_exact, rel_tol=1e-12, abs_tol=1e-14,
+        s_exact,
+        rel_tol=1e-12,
+        abs_tol=1e-14,
     )
     assert math.isclose(
         float(internal_energy_loc(jnp.array(rho), jnp.array(vt), gamma)),
-        iota_exact, rel_tol=1e-12, abs_tol=1e-14,
+        iota_exact,
+        rel_tol=1e-12,
+        abs_tol=1e-14,
     )
 
 
@@ -141,6 +150,6 @@ def test_kappa_star_independent_of_rho_and_vartheta():
     k2 = kappa_star(100.0, 7.0, 1.4)
     assert math.isclose(k1, k2, rel_tol=0, abs_tol=0)
 
-    k_air = kappa_star(100.0, 0.72, 1.4)   # air-like
-    k_wtr = kappa_star(100.0, 7.0,  1.4)   # water-like
+    k_air = kappa_star(100.0, 0.72, 1.4)  # air-like
+    k_wtr = kappa_star(100.0, 7.0, 1.4)  # water-like
     assert k_air > k_wtr  # lower Pr ⇒ higher dimensionless conductivity

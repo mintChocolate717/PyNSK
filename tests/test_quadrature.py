@@ -1,4 +1,5 @@
 """Tests for Gaussian quadrature (src/quadrature.py)."""
+
 import numpy as np
 import pytest
 
@@ -6,6 +7,7 @@ from src.bsplines import make_knot_vector
 from src.quadrature import gauss_legendre, quadrature_points, recommended_n_gauss
 
 # ── gauss_legendre ────────────────────────────────────────────────────────────
+
 
 def test_gauss_legendre_point_count():
     for n in [1, 2, 3, 5]:
@@ -34,14 +36,15 @@ def test_gauss_legendre_exact_integration(poly_degree):
 
 # ── quadrature_points ─────────────────────────────────────────────────────────
 
+
 def test_quadrature_point_count():
     n_ctrl, degree, n_gauss = 6, 2, 3
     t = make_knot_vector(n_ctrl, degree)
     n_elements = len(np.unique(np.asarray(t))) - 1
     xi, r, w = quadrature_points(t, degree, n_gauss, R_max=1.0)
     assert len(xi) == n_elements * n_gauss
-    assert len(r)  == n_elements * n_gauss
-    assert len(w)  == n_elements * n_gauss
+    assert len(r) == n_elements * n_gauss
+    assert len(w) == n_elements * n_gauss
 
 
 def test_quadrature_pts_in_domain():
