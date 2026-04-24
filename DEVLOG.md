@@ -188,8 +188,41 @@ rebase.
 - `tests/test_mms.py` — 7 tests: manufactured-solution patch tests using linear hat basis + sympy reference integrals
 - `tests/test_phase_field_div.py` — 4 tests: `phase_field_div` (spherical ∇·(∇ρ/ϑ)) correctness
 
-### Open issues found during this work
+### Open issues found during this work (carried to TODO)
 
 1. **LaTeX GenAlpha formula mismatch** (see Phase C note above): `temporal-discretization.tex` must be updated to show JWH first-order parameters, not Chung & Hulbert second-order parameters.
 2. **Dense assembler**: `assemble_residual` uses dense `segment_sum`. A TODO(sparse) marker identifies the site for future BCOO/CSR upgrade; IEN already provides the sparsity pattern.
 3. **End-to-end run not yet wired**: each layer is tested independently, but a full config → IC → assemble → solve → output pipeline run is not yet scripted. `scripts/run_sample_case.py` is a placeholder.
+
+---
+
+## [2026-04-24] — Session 5: LaTeX symbol audit + nomenclature table
+
+### Completed (Bubble-Cavitation repo)
+
+**Six hard symbol conflicts resolved** (audit report `audit-reports/02-latex-variable-conflicts.md`):
+- H1: `\gamma` → `\hat{\gamma}` in `numerical-implementation.tex` (Gen-α update param, was clashing with heat-capacity ratio)
+- H2: thermodynamic grouping `\xi`/`\xi^h` → `\chi`/`\chi^h` in `momentum_symm.tex`, `momentum-discretization.tex`, `temporal-discretization.tex` (was clashing with Gauss coordinate ξ)
+- H3: electrochemical potential `\nu_{\mathrm{loc}}` → `v_{\mathrm{loc}}` in `derived-quantities.tex` (was clashing with specific volume ν)
+- H4: algorithm symbol `\zeta^h` → `\varsigma^h` in `numerical-implementation.tex` (outright wrong symbol)
+- H5: B-spline degree `p` → `k` in `B-spline.tex`, `korteweg-stress.tex` (was clashing with pressure p)
+- H6: bare gas constant `R` → `R_g` in `nondimensionalization.tex`, `free-energy.tex` (was clashing with domain radius R)
+
+**Four soft issues resolved:**
+- S1: quadrature weight `w_q` → `\omega_q` throughout all spatial-discretization and temporal-discretization files
+- S3: Laplacian notation `\Delta\rho` → `\nabla\cdot\nabla\rho` in `korteweg-stress.tex` (user preference: avoid ∇² notation)
+- S4: heat source `r_s` → `q_{\mathrm{src}}` in `energy-discretization.tex`, `heat_symm.tex`, `temporal-discretization.tex`
+- k/n_V: renaming degree p→k introduced clash with auxiliary DOF count k → fixed to `n_V`
+
+**Nomenclature table added** (`nomenclature/nomenclature.tex`):
+- 9 subsections covering all symbols across the paper
+- Full-width `longtable` (allows mid-table page breaks — no whitespace gaps between sections)
+- `\arraystretch{1.4}` for row breathing room; `\raggedbottom` in `main.tex`
+
+**Confirmed:** `temporal-discretization.tex` currently shows JWH (2000) first-order parameters (α_m = (2−ρ∞)/(1+ρ∞)) — the mismatch flagged in Session 4 is resolved. Marking LaTeX TODO item closed.
+
+### PyNSK audit (code not yet changed)
+
+Audit report `audit-reports/03-pynsk-variable-collisions.md` documents 3 hard + 5 soft naming issues. No code changes made this session — all items carried to TODO.
+
+**Critical:** H3 (cache key/shape mismatch between `assembler.build_basis_cache` and `postprocess.*`) will crash the first end-to-end run — highest priority fix before wiring `run_sample_case.py`.

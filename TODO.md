@@ -32,8 +32,22 @@
 - [ ] Reproduce bubble collapse results
 
 ## LaTeX — open issues (Bubble-Cavitation repo)
-- [ ] **Fix temporal-discretization.tex**: Currently shows Chung & Hulbert (1993) second-order parameters (α_m = (2ρ∞−1)/(ρ∞+1), α_f = ρ∞/(ρ∞+1)). The NSK system is first-order; correct formulas are the JWH (2000) form: α_m = (2−ρ∞)/(1+ρ∞), α_f = 1/(1+ρ∞).
+- [x] **Fix temporal-discretization.tex**: JWH (2000) first-order parameters (α_m = (2−ρ∞)/(1+ρ∞), α_f = 1/(1+ρ∞)) confirmed correct in current file — resolved.
 - [ ] Complete `numerical-implementation/` — boundary conditions, initial conditions, convergence criteria
+
+## PyNSK naming audit — fixes needed (audit-reports/03-pynsk-variable-collisions.md)
+
+**Hard (fix before first end-to-end run):**
+- [ ] **H3 (crash)** — add `postprocess_cache_from_assembler(cache)` adapter in `postprocess.py`: flattens `(n_elem, n_gauss)` → `(n_qp,)`, renames `"r"`→`"r_q"`, `"w"`→`"w_q"`, `"N"`→`"N_rho"`/`"N_u"`/etc. Current assembler output is incompatible with all postprocess functions.
+- [ ] **H2** — rename `dirichlet_far_field` parameter `rho_inf` → `rho_far` in `assembler.py:486` and `test_assembler.py:416,418,433` (silent wrong-BC risk if spectral radius ever passed here)
+- [ ] **H1** — rename `GenAlphaParams.gamma` → `GenAlphaParams.gamma_ga` in `solver.py:50,58,234,246` (latent clash with adiabatic index `gamma` in constitutive/residuals)
+
+**Soft:**
+- [ ] **S1** — replace `theta`/`theta_q` → `vartheta`/`vartheta_q` in `postprocess.py:118,119,215,221,222`; `theta_v` → `vartheta_v` in `initial_conditions.py:126-128`
+- [ ] **S2** — inline `float(self.rho_inf)` directly in `GenAlphaParams.__post_init__` (removes 3-line `rho` alias that shadows fluid density name)
+- [ ] **S3** — rename loop variable `n` → `fname` in `io_vtk._write_csv_pvd` line 204
+- [ ] **S4** — update `src/README.md` `korteweg_stress` signature to include `r` as 4th positional argument
+- [ ] **S5** — remove `d_vth`/`d_vth_dot` abbreviation in `assembler._element_residuals` lines 210,215 (keep `ctrl_vartheta` names after IEN gather)
 
 ## Best-practice backlog
 - [ ] **Sparse solvers** — migrate Newton linear solve to `scipy.sparse.linalg` once Jacobian sparsity pattern is stable (GMRES with ILU preconditioner); IEN connectivity already provides sparsity pattern
