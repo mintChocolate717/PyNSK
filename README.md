@@ -74,6 +74,8 @@ docs/                Sphinx skeleton + architecture overview
 notebooks/           exploratory Jupyter notebooks
 ```
 
+Each directory has its own `README.md` with a file-by-file description of its modules and tests.
+
 See `docs/architecture.md` for the layered module diagram.
 
 ## Contributing
